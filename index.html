@@ -2331,10 +2331,12 @@ function hexToRgb(hex) {
 function rgbToHex(r, g, b) {
   return '#' + [r, g, b].map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
 }
-// Dégradé violet sombre (0 = pas travaillé) -> violet marque -> blanc chaud (1 = très travaillé)
+// Dégradé violet (0 = pas travaillé) -> violet marque -> blanc chaud (1 = très travaillé)
+// Le stop bas est volontairement assez clair : sur un fond de carte quasi noir, un violet
+// trop sombre devient invisible (silhouette illisible).
 function intensityColor(t) {
   t = Math.max(0, Math.min(1, t));
-  const stops = [[0, '#241d42'], [0.55, '#7c4dff'], [1, '#ffffff']];
+  const stops = [[0, '#4a3d7a'], [0.55, '#8b5cf6'], [1, '#ffffff']];
   let lo = stops[0], hi = stops[stops.length - 1];
   for (let i = 0; i < stops.length - 1; i++) {
     if (t >= stops[i][0] && t <= stops[i + 1][0]) { lo = stops[i]; hi = stops[i + 1]; break; }
@@ -2373,10 +2375,12 @@ function muscleScoresToIdColors(scores) {
 
 function renderBodyMapSVG(scores, small) {
   const idColor = muscleScoresToIdColors(scores);
-  const baseColor = '#1c1538'; // corps "au repos" (zones non mappées : tête, mains, pieds, articulations...)
+  const baseColor = '#4a3d7a'; // corps "au repos" (zones non mappées : tête, mains, pieds, articulations...)
+  // Contour sombre sur chaque zone : sans lui, les régions au même niveau d'intensité (ou
+  // sombres) fusionnent en une tache illisible sur le fond violet foncé de la carte.
   const paths = BODY_MUSCLE_PATHS.map(m => {
     const fill = idColor[m.id] || baseColor;
-    return `<path class="bm-part" d="${m.d}" fill="${fill}"></path>`;
+    return `<path class="bm-part" d="${m.d}" fill="${fill}" stroke="rgba(8, 5, 20, 0.6)" stroke-width="0.35"></path>`;
   }).join('');
   return `<svg viewBox="0 0 74 93" class="body-map-svg${small ? ' small' : ''}" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
 }
