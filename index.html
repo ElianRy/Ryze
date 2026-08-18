@@ -173,6 +173,12 @@ body {
 .exercise.done .ex-check svg { opacity: 1; }
 .ex-name { font-size: 15px; font-weight: 700; line-height: 1.2; margin-bottom: 4px; }
 .ex-meta { display: flex; gap: 10px; flex-wrap: wrap; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 0.5px; }
+.sets-counter { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.sets-counter-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-faint); letter-spacing: 0.5px; text-transform: uppercase; }
+.sets-counter-controls { display: flex; align-items: center; gap: 5px; }
+.sets-counter-value { font-family: 'Bebas Neue', sans-serif; font-size: 17px; color: var(--accent); min-width: 12px; text-align: center; display: inline-block; }
+.sets-counter-value.pop { animation: popIn 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.sets-counter-target { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-faint); }
 .ex-meta b { color: var(--text); font-weight: 600; }
 
 .ex-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
@@ -2691,7 +2697,7 @@ function loadState() {
   } catch(e) {}
   return {
     counters: { 1: 0, 2: 0, 3: 0, 4: 0 },
-    weights: {}, feelings: {}, comments: {}, done: {},
+    weights: {}, feelings: {}, comments: {}, done: {}, setsDone: {}, // { exId: nb de séries faites }
     history: {}, // { exId: [{ date, weight }] }
     orders: {},  // { day: [exId, ...] randomized order per section concatenated }
     openDay: null,
@@ -2739,6 +2745,7 @@ function migrateState(s) {
   s.feelings = s.feelings || {};
   s.comments = s.comments || {};
   s.done = s.done || {};
+  s.setsDone = s.setsDone || {};
   s.history = s.history || {};
   s.orders = s.orders || {};
   s.sessionStart = s.sessionStart || {};
@@ -2868,6 +2875,21 @@ function changeCounter(day, delta) {
     spawnConfetti(counterEl, day);
   }
   vibrate(20);
+}
+
+// Nombre de séries déjà faites pour un exercice donné. Incrémenté automatiquement au
+// lancement du repos (voir startTimer), corrigeable à la main via les boutons -/+.
+function changeSets(exId, delta) {
+  state.setsDone[exId] = Math.max(0, (state.setsDone[exId] || 0) + delta);
+  saveState();
+  const valueEl = document.getElementById(`sc-${exId}`);
+  if (valueEl) {
+    valueEl.textContent = state.setsDone[exId];
+    valueEl.classList.remove('pop');
+    void valueEl.offsetWidth;
+    valueEl.classList.add('pop');
+  }
+  vibrate(15);
 }
 
 const CONFETTI_COLORS = {
@@ -3128,6 +3150,15 @@ function renderExercise(ex, day) {
         <div class="ex-meta">
           <span><b>${ex.sets}</b></span>
           <span>· pause <b>${ex.rest}</b></span>
+        </div>
+        <div class="sets-counter">
+          <span class="sets-counter-label">Séries faites</span>
+          <div class="sets-counter-controls">
+            <button class="counter-btn" onclick="changeSets('${ex.id}', -1)">−</button>
+            <span class="sets-counter-value" id="sc-${ex.id}">${state.setsDone[ex.id] || 0}</span>
+            <span class="sets-counter-target">/ ${ex.setsCount || 3}</span>
+            <button class="counter-btn" onclick="changeSets('${ex.id}', 1)">+</button>
+          </div>
         </div>
       </div>
     </div>
@@ -3598,12 +3629,17 @@ let _lastResetSnapshot = null;
 
 function resetDay(d) {
   const doneSnapshot = {};
+  const setsSnapshot = {};
   Object.keys(state.done).forEach(k => {
     if (k.startsWith(`d${d}e`)) doneSnapshot[k] = state.done[k];
+  });
+  Object.keys(state.setsDone).forEach(k => {
+    if (k.startsWith(`d${d}e`)) setsSnapshot[k] = state.setsDone[k];
   });
   _lastResetSnapshot = {
     day: d,
     done: doneSnapshot,
+    sets: setsSnapshot,
     sessionStart: state.sessionStart[d],
     lastActivity: state.lastActivity[d]
   };
@@ -3611,10 +3647,17 @@ function resetDay(d) {
   Object.keys(state.done).forEach(k => {
     if (k.startsWith(`d${d}e`)) delete state.done[k];
   });
+  Object.keys(state.setsDone).forEach(k => {
+    if (k.startsWith(`d${d}e`)) delete state.setsDone[k];
+  });
   delete state.sessionStart[d];
   delete state.lastActivity[d];
   saveState();
-  document.querySelectorAll(`[id^="d${d}e"]`).forEach(el => el.classList.remove('done'));
+  document.querySelectorAll(`[id^="d${d}e"]`).forEach(el => {
+    el.classList.remove('done');
+    const sc = el.querySelector('.sets-counter-value');
+    if (sc) sc.textContent = '0';
+  });
   updateAllProgress();
   showToast(`${WORKOUT[d].name} réinitialisé`, { label: 'Annuler', onClick: () => undoResetDay(d) });
   vibrate(40);
@@ -3624,12 +3667,15 @@ function undoResetDay(d) {
   if (!_lastResetSnapshot || _lastResetSnapshot.day !== d) return;
   const snap = _lastResetSnapshot;
   Object.keys(snap.done).forEach(k => { state.done[k] = snap.done[k]; });
+  Object.keys(snap.sets || {}).forEach(k => { state.setsDone[k] = snap.sets[k]; });
   if (snap.sessionStart) state.sessionStart[d] = snap.sessionStart;
   if (snap.lastActivity) state.lastActivity[d] = snap.lastActivity;
   _lastResetSnapshot = null;
   saveState();
   document.querySelectorAll(`[id^="d${d}e"]`).forEach(el => {
     el.classList.toggle('done', !!state.done[el.id]);
+    const sc = el.querySelector('.sets-counter-value');
+    if (sc) sc.textContent = state.setsDone[el.id] || 0;
   });
   updateAllProgress();
   showToast(`${WORKOUT[d].name} restauré`);
@@ -3724,6 +3770,9 @@ function startTimer(seconds, exName, exId) {
   requestNotifPermission();
   timerTotal = seconds;
   timerEndsAt = Date.now() + seconds * 1000;
+  // Lancer le repos veut dire "je viens de finir une série" : on la compte automatiquement,
+  // avec un +/- sur la carte de l'exercice pour corriger si besoin.
+  if (exId) changeSets(exId, 1);
   document.getElementById('timerLabel').textContent = 'Repos · ' + exName;
   document.getElementById('timerOverlay').classList.add('active');
 
@@ -4080,6 +4129,9 @@ function closeRecap(validate) {
     // Reset done and session start
     Object.keys(state.done).forEach(k => {
       if (k.startsWith(`d${d}e`)) delete state.done[k];
+    });
+    Object.keys(state.setsDone).forEach(k => {
+      if (k.startsWith(`d${d}e`)) delete state.setsDone[k];
     });
     delete state.sessionStart[d];
     delete state.lastActivity[d];
