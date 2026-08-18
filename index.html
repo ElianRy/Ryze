@@ -3719,27 +3719,11 @@ function sendNotification(name) {
   } catch(e) {}
 }
 
-// Déclenche un raccourci iOS natif ("RyzeRepos") qui démarre un vrai minuteur système
-// (celui de l'appli Horloge) — ça sonne/notifie même téléphone verrouillé, contrairement à
-// tout ce qu'une page web peut faire seule. Ne fait rien de gênant si le raccourci n'existe
-// pas encore ou sur un appareil qui ne supporte pas ce lien (Android, desktop) : au pire,
-// rien ne se passe silencieusement, au mieux iOS affiche une popup "page introuvable".
-const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-function triggerNativeTimer(seconds) {
-  if (!IS_IOS) return; // le lien shortcuts:// n'a de sens que sur iOS ; ailleurs ça peut juste perturber la page
-  try {
-    const url = 'shortcuts://run-shortcut?name=RyzeRepos&input=text&text=' + encodeURIComponent(String(Math.round(seconds)));
-    window.location.href = url;
-  } catch(e) {}
-}
-
 function startTimer(seconds, exName, exId) {
   stopTimer(true);
   requestNotifPermission();
   timerTotal = seconds;
   timerEndsAt = Date.now() + seconds * 1000;
-  triggerNativeTimer(seconds);
   document.getElementById('timerLabel').textContent = 'Repos · ' + exName;
   document.getElementById('timerOverlay').classList.add('active');
 
