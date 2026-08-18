@@ -2561,7 +2561,7 @@ document.getElementById('appleIcon').href = IMAGES.logo || '';
 
 const WORKOUT = {
   1: {
-    name: "Pecs-Triceps",
+    name: "Push",
     warmup: { title: "Échauffement", duration: "5 min", details: "Tapis · 6 → 6,5 km/h · inclinaison 3-4%<br>+ rotations épaules/bras 30 sec" },
     sections: [
       { title: "Pectoraux", exercises: [
@@ -2578,7 +2578,7 @@ const WORKOUT = {
     cooldown: { title: "Fin de séance", duration: "10 min", details: "Tapis · 5,5-6 km/h · inclinaison 6-8%" }
   },
   2: {
-    name: "Dos-Biceps",
+    name: "Pull",
     warmup: { title: "Échauffement", duration: "5 min", details: "Tapis · 6 → 6,5 km/h · inclinaison 3%<br>+ rotations bras/épaules 30 sec" },
     sections: [
       { title: "Dos", exercises: [
@@ -2599,7 +2599,7 @@ const WORKOUT = {
     cooldown: { title: "Fin de séance", duration: "10 min", details: "Tapis · 5,5-6 km/h · inclinaison 5-7%" }
   },
   3: {
-    name: "Jambes",
+    name: "Legs",
     warmup: { title: "Échauffement", duration: "5 min", details: "Tapis · 5,5-6 km/h · inclinaison 3%" },
     sections: [
       { title: "Séance", exercises: [
@@ -2612,7 +2612,7 @@ const WORKOUT = {
     cooldown: { title: "Fin de séance", duration: "10 min", details: "Tapis · 5,5 km/h · inclinaison 5%" }
   },
   4: {
-    name: "Épaules-Abdos",
+    name: "Core",
     warmup: { title: "Échauffement", duration: "5 min", details: "Tapis · 6 km/h · inclinaison 3%<br>+ rotations épaules 30 sec" },
     sections: [
       { title: "Épaules", exercises: [
@@ -2640,8 +2640,9 @@ const DEFAULT_WORKOUT = JSON.parse(JSON.stringify(WORKOUT));
 // Dynamique (pas une table figée) : reste juste même si le jour est renommé via l'éditeur.
 function dayInitials(d) {
   const name = (WORKOUT[d] && WORKOUT[d].name) || `Jour ${d}`;
-  const letters = name.split(/[\s+-]+/).filter(Boolean).map(w => w[0].toUpperCase());
-  return letters.slice(0, 3).join('') || `J${d}`;
+  const words = name.split(/[\s+-]+/).filter(Boolean);
+  if (words.length > 1) return words.map(w => w[0].toUpperCase()).slice(0, 3).join('') || `J${d}`;
+  return (words[0] || `J${d}`).slice(0, 3).toUpperCase();
 }
 
 // Durée estimée d'une séance, calculée à partir du contenu réel du jour (pas une valeur fixe) :
