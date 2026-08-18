@@ -105,7 +105,7 @@ body {
 }
 
 .day-tabs { display: flex; gap: 6px; padding: 14px 18px 0; }
-.day-tab { flex: 1; min-width: 0; padding: 10px 4px; background: var(--bg-3); border: 1px solid var(--border); border-radius: 12px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.3px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: all 0.2s; }
+.day-tab { flex: 1; min-width: 0; padding: 10px 4px; background: var(--bg-3); border: 1px solid var(--border); border-radius: 12px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.3px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; cursor: pointer; transition: all 0.2s; }
 .day-tab[data-day="1"].active { background: rgba(255, 85, 85, 0.15); border-color: var(--accent-1); color: var(--text); }
 .day-tab[data-day="2"].active { background: rgba(91, 140, 255, 0.15); border-color: var(--accent-2); color: var(--text); }
 .day-tab[data-day="3"].active { background: rgba(74, 222, 128, 0.15); border-color: var(--accent-3); color: var(--text); }
@@ -2798,7 +2798,7 @@ const WORKOUT = {
     cooldown: { title: "Fin de séance", duration: "10 min", details: "Tapis · inclinaison 5%" }
   },
   5: {
-    name: "🏠 Maison",
+    name: "Home",
     warmup: { title: "Échauffement", duration: "5 min", details: "Jumping jacks · rotations d'épaules et de hanches · montées de genoux 30 sec" },
     sections: [
       { title: "Exercices", exercises: [] }
