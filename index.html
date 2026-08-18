@@ -716,6 +716,8 @@ body.timer-banner-active .header { top: 38px; }
   content: ''; width: 18px; height: 2px;
   background: #fbbf24; box-shadow: 0 0 8px #fbbf24;
 }
+.data-actions { display: flex; flex-direction: column; gap: 8px; padding: 0 4px 20px; }
+.data-actions .toolbar-btn { flex: none; }
 
 .palette-preview {
   flex-direction: column !important;
@@ -1035,6 +1037,17 @@ body.timer-banner-active .header { top: 38px; }
 .confirm-btn:active { transform: scale(0.96); }
 .confirm-btn.cancel { background: var(--bg-3); border-color: var(--border); color: var(--text); }
 .confirm-btn.ok { background: linear-gradient(135deg, #fbbf24, #f59e0b); border-color: #fbbf24; color: #1a0f00; }
+#dataOverlay { z-index: 2450; }
+.data-card { max-width: 360px; }
+.data-textarea {
+  width: 100%; height: 110px; resize: none;
+  background: var(--bg-3); border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+  padding: 10px; margin-bottom: 10px; -webkit-appearance: none;
+}
+.data-textarea::placeholder { color: var(--text-faint); font-family: 'Inter', sans-serif; font-size: 12px; }
+.data-msg { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #4ade80; text-align: center; margin-bottom: 10px; min-height: 14px; }
+.data-msg.error { color: #ff7a7a; }
 
 /* ==================== RECAP ADDITIONS ==================== */
 .recap-rewards {
@@ -1332,6 +1345,19 @@ body { padding-bottom: 80px; }
     <div class="confirm-actions">
       <button class="confirm-btn cancel" onclick="resolveConfirm(false)">Annuler</button>
       <button class="confirm-btn ok" onclick="resolveConfirm(true)">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="dataOverlay">
+  <div class="confirm-card data-card">
+    <div class="confirm-title" id="dataTitle">Exporter</div>
+    <div class="confirm-body" id="dataBody">Copie ce texte pour le sauvegarder.</div>
+    <textarea class="data-textarea" id="dataTextarea" placeholder="Colle ici le texte exporté depuis l'ancienne app..."></textarea>
+    <div class="data-msg" id="dataMsg"></div>
+    <div class="confirm-actions">
+      <button class="confirm-btn cancel" onclick="closeDataOverlay()">Fermer</button>
+      <button class="confirm-btn ok" id="dataActionBtn" onclick="copyExportData()">Copier</button>
     </div>
   </div>
 </div>
@@ -4761,7 +4787,92 @@ function renderShop() {
     ${renderCat('Cadres de titre', SHOP_TITLE_FRAMES, 'ownedTitleFrames', 'titleFrame', 'frame')}
     ${renderCat('Citations du recap', SHOP_QUOTES, 'ownedQuotePacks', 'quotePack', 'quote')}
     ${renderCat('Sons de fin de chrono', SHOP_SOUNDS, 'ownedSounds', 'timerSound', 'sound')}
+    <div class="shop-cat-title">Données</div>
+    <div class="data-actions">
+      <button class="toolbar-btn edit" onclick="openExportData()">📤 Exporter mes données</button>
+      <button class="toolbar-btn edit" onclick="openImportData()">📥 Importer des données</button>
+    </div>
   `;
+}
+
+// ================== EXPORT / IMPORT ==================
+// Sert à transférer les stats d'une origine à une autre (ex: file:// -> GitHub Pages),
+// puisque localStorage est isolé par origine et qu'il n'y a pas de backend commun.
+function openExportData() {
+  const overlay = document.getElementById('dataOverlay');
+  document.getElementById('dataTitle').textContent = 'Exporter mes données';
+  document.getElementById('dataBody').textContent = 'Copie ce texte (bouton ci-dessous), puis colle-le dans "Importer des données" sur l\'autre appareil/version.';
+  const ta = document.getElementById('dataTextarea');
+  ta.value = localStorage.getItem(STORAGE_KEY) || '{}';
+  ta.readOnly = true;
+  ta.placeholder = '';
+  document.getElementById('dataMsg').textContent = '';
+  document.getElementById('dataMsg').className = 'data-msg';
+  const btn = document.getElementById('dataActionBtn');
+  btn.textContent = 'Copier';
+  btn.onclick = copyExportData;
+  overlay.classList.add('active');
+  setTimeout(() => { ta.focus(); ta.select(); }, 100);
+}
+
+function copyExportData() {
+  const ta = document.getElementById('dataTextarea');
+  const msg = document.getElementById('dataMsg');
+  ta.select();
+  const finish = (ok) => {
+    msg.textContent = ok ? 'Copié ! Colle-le dans Importer sur l\'autre version.' : 'Sélection prête : fais Copier manuellement.';
+    msg.className = 'data-msg' + (ok ? '' : ' error');
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(() => finish(true)).catch(() => finish(false));
+  } else {
+    try { finish(document.execCommand('copy')); } catch(e) { finish(false); }
+  }
+}
+
+function openImportData() {
+  const overlay = document.getElementById('dataOverlay');
+  document.getElementById('dataTitle').textContent = 'Importer des données';
+  document.getElementById('dataBody').textContent = 'Colle ici le texte exporté depuis l\'ancienne version. Ça remplacera tes données actuelles sur cet appareil.';
+  const ta = document.getElementById('dataTextarea');
+  ta.value = '';
+  ta.readOnly = false;
+  ta.placeholder = 'Colle ici le texte exporté...';
+  document.getElementById('dataMsg').textContent = '';
+  document.getElementById('dataMsg').className = 'data-msg';
+  const btn = document.getElementById('dataActionBtn');
+  btn.textContent = 'Restaurer';
+  btn.onclick = confirmImportData;
+  overlay.classList.add('active');
+  setTimeout(() => ta.focus(), 100);
+}
+
+function confirmImportData() {
+  const ta = document.getElementById('dataTextarea');
+  const msg = document.getElementById('dataMsg');
+  let parsed;
+  try {
+    parsed = JSON.parse(ta.value);
+  } catch(e) {
+    msg.textContent = 'Texte invalide, vérifie que tu as tout copié.';
+    msg.className = 'data-msg error';
+    return;
+  }
+  if (!parsed || typeof parsed !== 'object' || (!parsed.weights && !parsed.sessionHistory && !parsed.counters)) {
+    msg.textContent = 'Ça ne ressemble pas à un export Ryze valide.';
+    msg.className = 'data-msg error';
+    return;
+  }
+  customConfirm('Remplacer tes données ?', 'Tes données actuelles sur cet appareil seront écrasées par celles importées. Impossible à annuler.').then(ok => {
+    if (!ok) return;
+    const migrated = migrateState(parsed);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    location.reload();
+  });
+}
+
+function closeDataOverlay() {
+  document.getElementById('dataOverlay').classList.remove('active');
 }
 
 function equipItem(kind, id) {
