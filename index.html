@@ -28,6 +28,7 @@
   --accent-2: #5b8cff;
   --accent-3: #4ade80;
   --accent-4: #fbbf24;
+  --accent-5: #22d3ee;
   --brand: #7c4dff;
   --brand-2: #3b63ff;
   --warmup: #a78bfa;
@@ -109,6 +110,7 @@ body {
 .day-tab[data-day="2"].active { background: rgba(91, 140, 255, 0.15); border-color: var(--accent-2); color: var(--text); }
 .day-tab[data-day="3"].active { background: rgba(74, 222, 128, 0.15); border-color: var(--accent-3); color: var(--text); }
 .day-tab[data-day="4"].active { background: rgba(251, 191, 36, 0.15); border-color: var(--accent-4); color: var(--text); }
+.day-tab[data-day="5"].active { background: rgba(34, 211, 238, 0.15); border-color: var(--accent-5); color: var(--text); }
 .day-tab:active { transform: scale(0.95); }
 
 .days-container {
@@ -126,6 +128,7 @@ body {
 .day[data-day="2"] { --accent: var(--accent-2); }
 .day[data-day="3"] { --accent: var(--accent-3); }
 .day[data-day="4"] { --accent: var(--accent-4); }
+.day[data-day="5"] { --accent: var(--accent-5); }
 .day-card {
   background: linear-gradient(135deg, rgba(21, 16, 46, 0.85), rgba(15, 10, 36, 0.9));
   border: 1px solid rgba(124, 77, 255, 0.15); border-radius: 22px;
@@ -158,6 +161,8 @@ body {
 .exercise { background: rgba(21, 16, 46, 0.7); border: 1px solid rgba(124, 77, 255, 0.12); border-radius: 16px; padding: 14px; margin-bottom: 10px; position: relative; transition: all 0.3s; }
 .exercise.done { opacity: 0.38; background: rgba(15, 10, 36, 0.5); }
 .exercise.done .ex-image-wrap { filter: grayscale(1); }
+.exercise.skipped { opacity: 0.5; border-style: dashed; border-color: rgba(251, 191, 36, 0.3); }
+.exercise.skipped .ex-image-wrap { filter: grayscale(0.7); }
 .ex-top { display: flex; gap: 12px; margin-bottom: 12px; }
 .ex-image-wrap { width: 78px; height: 78px; background: linear-gradient(135deg, var(--bg-4), var(--bg-2)); border: 1px solid var(--accent); border-radius: 14px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; box-shadow: inset 0 0 30px -10px var(--accent), 0 2px 12px rgba(0,0,0,0.4); }
 .ex-image-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -166,6 +171,14 @@ body {
 .ex-num-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .ex-check { width: 24px; height: 24px; border: 2px solid var(--border); border-radius: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-left: auto; transition: all 0.2s; flex-shrink: 0; }
 .ex-info-btn { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--bg-4); color: var(--text-dim); font-family: 'Georgia', serif; font-size: 13px; font-weight: 700; font-style: italic; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+.ex-skip-btn {
+  padding: 4px 8px; border-radius: 20px; border: 1.5px solid var(--border);
+  background: var(--bg-4); color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.3px; text-transform: uppercase;
+  display: flex; align-items: center; gap: 3px; cursor: pointer; flex-shrink: 0; white-space: nowrap;
+}
+.ex-skip-btn:active { transform: scale(0.95); }
+.exercise.skipped .ex-skip-btn { background: rgba(251, 191, 36, 0.18); border-color: #fbbf24; color: #fbbf24; }
 .ex-info-btn:active { transform: scale(0.9); }
 .ex-info-btn:hover { border-color: var(--accent); color: var(--accent); }
 .exercise.done .ex-check { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 12px var(--accent); }
@@ -1522,7 +1535,14 @@ const IMAGES = {
   machineShoulderPress: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAcFBQYFBAcGBgYIBwcICxILCwoKCxYPEA0SGhYbGhkWGRgcICgiHB4mHhgZIzAkJiorLS4tGyIyNTEsNSgsLSz/2wBDAQcICAsJCxULCxUsHRkdLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCz/wAARCADwAPADASIAAhEBAxEB/8QAHQABAAMAAwEBAQAAAAAAAAAAAAUGBwMECAIBCf/EAEsQAAEDAwICBgYGBwQIBwEAAAEAAgMEBREGIRIxBxMiQVFxFGGBkaGxFTJCUmLBIyQzNHKi0SVTgrIIQ2Nzo+Hw8RYnNWSSpLPC/8QAGQEBAAMBAQAAAAAAAAAAAAAAAAECAwQF/8QAIhEBAAICAgEFAQEAAAAAAAAAAAECAxESITEEBRMiQVGR/9oADAMBAAIRAxEAPwD0iiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIuKpqYaSEy1ErY4x3uKDlRVur1tRQu4Kemqal3dhvCD79/go6XVt6nyKe3wU4PIyuLj+SC6os8nuV9mY51RdvR2NBJ6poaAPNdK0XOO5QCvt99qK6JxLRNDUlzSRzCDUEVRpdQ1lO4CYidg5hww73q0UtVFWU7ZoXZY73g+BQcyIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIg455mU8D5pDhjBklUyunmulUZJjho+q3uYFN6kqCI4acH65L3eQ5fH5KvzO6uAAc37nyQccbC+UQ00TnOdyDRlzknhqqKYCppZYm4JDiMg+5W+zWxtvpAXNHXyDMjvy8gqV0xOkjpNJyRuc3GoqRp4SRkHjGD4j1IInTWiKS0z3qQTV0rbtMZZW1RDmjOctAPdhxG+/JWzR2ibLZbE6jpaCFlMXuLGN4ts7EnJ5+vyXJycTlT1na5ttYXDHES4eROyDNaq21Om9QTUzZ5pqMu4mtkcXENPIgnvHL2K36ZqTFXPpiexK3iHmP+XyXFqyJr7nCSOcWPiVxWfsXqjx3jH8pQXNERAREygIiICIiAiIgIiICIiAiIgIiICIiAiIgqupJD9LNaRsIhj3ldOmYJrvSRu+rxs+G67eqBi6R+uIfMrqUJ/tqjP42/JBdlnnTHtZtNyf3eoqB3/EI/NaGs86aOzo+3S/3V5oX/wDGA/NB9arq6ig1/oinppXRU9fXVUdVG36swbE4tDvIjKvlL+7N9WR8Vnuu+zrjo+k8LxO33xPWhU37D/E75lBWtVD9fgP+zPzXVtZxeKL2fIruarH65TH8DvmF0rYf7XofMfIoLqiLhmrKaAEy1EUYHPieAgqetb3qJn9maThpnV+AZqio3bADyw3kXd++wHccrJLvdOl7S0hrq67TSRZyXBkUkQ9Rbw7BaNbqu6U1DV3PqWXDr610kRYHdY6FzsA4HMgYwPDyUzf6aO5WOaKqZhjmdppGEFK0b/pAWerpvR9XPjtNWwhrahrHGCb5lh9R28CtStOobPfYRLarpR17CM5p5mv+R2Xl3pJ0vRWiyTTwtDQ4At2wRuslgkkp5xNBI+GUbh8bixw9o3Qf0NRefOgPW2pLjarvTVtc+4MpJIhC+se55YHB2RnmeQ5+K1l15uz/APXU0f8ADCT83ILUiqDrhcz9e5PaPwxMb+RXwJauQ719Y8+qTHyCC5IqniZrc+nVrfWZj+a6/wBLXSnfiK4CVo7pomu+LcFBdEVQdrd9CziuFJGYxzkhk5f4Xf1U7aL/AG+9scaObie0ZdG4YcB44/ogkkREBERAREQEREFW1UMV8B8Yz810KQ/2rRH8bPmpLVbf1ild4tcPiFF05xW0Z/Gz/MgvSzzpu7PRs6X+6r6N/wD9hn9Voaz7pyH/AJRXR/8Ady0z/dURoOHpD7GpNByeGoeH3xyK33e4S2218cGBJJUCIEt4sZccnHecch4qodJQ4bpoiT7up4R72SBX8QxTsljljbIzrCcOGR3FBiWnOlAdIdwqaWOGtp6qiaXkTCNjeDO+cbg7ZweWOatYMdPU0kdTPKyacuEP6zgkt8AMePdldzWlFZKF1VNPSUVKX0oZJVu/QlrHP7RMjSHbcLcDPPCwm7VUfST0y6dpNIy1hitwij9Lkc7DQyTjfMM7jPid3HCDexbxPzgnn/iL3/Mr5rbNJHa6t8dta0tgkIJjA+yVI6u6RdPaLLIrlUufWSN4mUsIDpC3xIyA0eskLq27pDtl7shrX0FU2hl4oy/LJAfEYa4nvVuM65a6RuN6cml5JotOUklaXmQwsJc8jtEDw2x7l8XC6tdUQxSPbwyu4eEbnHkqpO273K81FFabnUQWmnijLBVwgy75zgnfA25jKmqTT7LC01JmluF3mbwRvlO0We8DkO/3KqWOdPerqGqlh0zRhklRSy9bVStZgM22jB5nxPsWLhW7pM0/XWTWlXLVNc6GtkdNDKRs8ZwR5gjf3qojkUG+dBFNUUui6uth6rNTXOBbK0kODGNA5EEbkrT6y7Tmi4BZ4xKHA8cMnECO8YO4Ud0HacpndDlofURuElQZJ+JpwcOefywpq7UwoLi+nhzI1oB7Rwd0ERBfqeKbieJ6OXx3Cm4tW1UGMSMqmHvczB94x8lHvDZI8zRYb+MAhdOooqGJhlMhph4sfge5BcqTV1NPtLTysPfwdsfkfgv2vu2m/RzNUvgcR9kNIkPkOaoMVVWPBZTSkRA7SvYGldmitslTU4hjkqql25cdz5+r2oOK6iK8ykRUzqWiP2JHcbn/ANPJWbQ9uMFVNUMiLYBHwB5+0cjl7lGMt1RDKW1VHUsk+yDHlpPmMg+S0KlDm0kQe0NeGDiAGADhByoiICIiAiIgIiIK5qwfuh/jHyUKw4lpT4Ob/mU7qsfoKV3g9w+Cr5OGQnwP5oNAVB6cBnoX1CfuxRu90rCr8qP0zs6zob1KP/aE+5zSgj+kt36DR033dTUJ94d/VfXSP0vWfo5ElK+N1fd5h1kVIw8Ia0jAc932RkHlknHJdfpHk4tMaUn+7f7a/wB+P6q51OlrFcdSMvNbaaSpuVK0MhqJYw57G89s+Bzg8xkoPOdbp7X3SpWU131c+W2WqTLqalazgJaCPqRnccx237+AV80xQ0uiqOantdLFCGtdUwScPE+bhyHB7ubiCPHbiV/1lVCludlDsYnklhBP3izLR72qrV4dXCCmoGkemvbXU0oA/V3fVlB9oG3fxepBhwqarUlyluFVP1tXWnrpZnDiJJ7gPAch3ABXPREV9t8ktspGRzQ1MrZWdY08DJAMb47iPkFYaDSVBp/VLm2+DhEULGyknO7skY8NvmtBoquGyWSsuErATGAGN5Fzjs1vtOy78vrZyU+PX1YVxRW3L9Vlj5LNLAyrlD6p7B1sby0SE8bjwuwcAuJ9jRld9+qrda3z1lbWxudwlpDngBzsA8QOdgSOEeAHmqfrGGy0FmffNQ3FsdfNk5ceJ05+4xg325DGw7/FYy+gu+uqiprLRa5YbdSj9NUOJcAPxHvd+Fvt8Vy1pW0R33/GszMND1/rvSl/sUlBVyNq3uBLHwHLmP8AvNABxv4kZCqWmeil2qtEW6701WaeaavmgnLu0OpYBhzGjcvztjO+QuGj0XRxUrZ42Ctkj7TmzcnD1NG2Pets6MI7bNYX0FEyOiLJHVUIaOy1xbwvBHfuAfcV15/bs3p8cZb+GVM9b24wsVhuR0zoS3WmippHGhhbTune3sAgc9vH3ZPeo6SrqJ5n1E05Lju97zsqDrnRPSFVXaXUdp1AGQiT0akpGSup39WTyA3a7O+S45IGT4K72i0uk0Zbqi7ulkuTKdvX8TxjrPtbDb3Lz276kuss7BFRxiQt5yuGGjyC4o6IyTh8znVM7thkZHkApK2219dVw04/QxyHZ3DyHqHsV6ttmo7Yz9DHmQjeR27j/T2IK5bNJz1AbJXEwR90bfrH+itdJRU9DCIqaJsbPV3+Z71zogIiICIiAiIgIiICIiCC1U39Qgd4S/8A8lVt/wC7MPhlWjVAzamHwlb8iqs/9zHm75INBactB8Qqh0tM6zoi1OPC3yn3DP5K2QHip4z4tB+CrfSbH1vRVqhvjbKj/wDMoKhr13WdG2m5/u3S1SfGP+q1Jn7zL5NPzXn7UOvKS56Si02KWaGe0fQ9S+okcBHJxOh+r38nZ38D4L0Cz96f62t+ZQU/pMgMtmgkaMy0r/SY8c+Jha75Aj2ql6hujrdcYq20zROjq42yMjdk8Jfu7GPWM8+a0fVoBjpQRkEvBB8gqHctIOu8NFb6GtZb43zh7ndR1ju8YByNtzsrV1yjl4RPjpDWy+uFyrZKuVpne5jnE7ZHCAB8CFLagrq2qFqt1D1Tp3UstdEJv2b5d2RcXqGD71EX3QdHbtU0VnFXU1k9Q3rHzT4bhu+eENwMZxzzy5qUvNkutUaestk/WS2VhhHWc5m/WcwkdwHCB6wVN5ibTx8Eb12q+keg+66ouxvvSLXSPe7f0GOTLyPuve3Zjfwt94Wga6qqXR2j+rttNDTU0AbFBTRNDGgk92Bz2J9a6VPrz6HkEFwo6mnqZY2yNhDeLiaeTgeRVZqrpXay1xZ2XCkNPQMq2ubC54JONyXY7zgD1BXx4rW+2ulLXiOv1F3jRF9tkdDVUXUyy3DZ9IOwYpOHiLRnY7esbgrh0wy/WS6Fs9NNROdI0kSDHfh3mCM8vBbBrSeCh0jUXORvE6icyob3EEOAPwJTUr6Ou0nHWMdG7r3RNaTvnLgeIHuOAV2x7jlnDOC/cT/sM/grzi8eXzdZhI2gPpAew8Qaxo2JIznPjt8Sui0Al+w3cvm8RPkskIpt5oJIyw8uJ++3t4T71+wTRVEfXwZ6mQ8TOLng+PrXmOh17jDqWW/ad/8AD9TSQRNqga30huS6LvDdvDi5YPLdakqZam8V5ohjkc/Aq5oCIiAiIgIiICIiAiIgIiIInUozZnHwe0/FVN29IfM/JW/UIzY5z4Fp/mCqI3pj/F+SC9UR4rfTnxjafgFW+lF8jOinUxifwv8Ao6YZH8Bz8FMOuMNr0mblUB5gpKMzycAy7hazJwO84C8gaw6Yr9qGW60Vsm+i7HcJ5JXUzImtkla/GesdvkkDcA4QRN0vFVUUlbFU1rniWgt/CxztndWGBoA/C1zvYSvWum+kjTeqK2jislwjrzOwsfwngdEWt4u0x2Hb74wDyXh49ojJJUtapHQU8ckbnMfDcKd4c04I+sNiPJB7d1Z+ypT+J3yURQf+oUH+8H+ZTGqx+r0p/G75KHoP3+g/3o/zIIjX1tnj6QbLcWSvDZY3xYa4A7AZbk5+8D712rHceCGukijc+lfM84d9dg5HPiMg7rh6VDLWywQRSsiit0baud5OHdqRrWgHuOA4rp6eirop6yKjmbLCx/1ZTuCWgkhw8Sc8kEw2ijvllNNUWr02MBr4pYyA5mW7YOcgjHyWc8LrdrO3tldVwPgqW/oahgB4c4JJG2N+7xV8p2VUVW2Wpub6RkgLZepDeEubsMZ5EjHcunqmxUX0Y65vpXDqRxskncXTTv8Asjfk3O/ct8WaaRMT4lS1OXbo9KGq6Gz6Pq4K1wc6rjMUcGe0892PLnlZ1p3VNdNo+G2vk66mp3Gop5M7hrWuBYfLOyzvXOo6jU2qqmrmcTHGerib3NA5+85Wj9FOgblqHo1q7tbKhoq46yRjKeX6kzA0ZAP2XZzvyPf4rKJjWpWlqNbWPoNNW172nrXSxzyAc+zvj2NC4NNzios4eCHASyNBHIjjJGPeu26vhuVNFQSUFR9ISQO6uN7HNfDKAG4I/wAXPlsVzQUUduj9DiJcyAlgcebsHGT5qqX7FpKC+67sl3mrquB1na6WOGF+GSk4Ha9/tGy0lVjTg/taT1Q/mFZ0BERAREQEREBERAREQEREEffRmx1X8OfiFTmfsH/xD81dLw3is1WP9k75Klx/sZPMIJ26t67oyuEfPjtkzf8AhOC8IR/sW+Q+S96hnXaFmj+9SSN/lcF4Kj/Yt8h8kH59oKSoD+pVP4Zqd/8AO4fmo0Al4A3JWlaE6K7zqOKWScehUc3B23/XPC4O2HsQeq9UZdR0xAz2z/lUPQsd6dQktdtIO78S6FXZYxHG6/3ituM0hxHA6ThD3HubGzAWE610dV6b1NLA2pqGQSfpYSJnZDT3ZB5jl7EGxa1qqWv1VVW9hEhFXTMqBkEdiMvDf5mlTVioWSTzytkdE1p6vsbbNGPnleaaetrNO11NWUb3HicesD3Eh7huCfXgnda7ZelO3UFshNZxymYdrqG9pp78g48e7KDSqOjDyyES4Mchlc924BPcAo/W01O2xVjGy9dUCFx4n7iMY547s93efLKqR6ULXUCWWjgrgxxOXDhbw+oc1FXbpKslHZ5I2UFVVSPDs8bw0EnvJyST60HnJzi9znE5Ljklex+gSg9A6G7OS3DqnrKg/wCJ5I+GF47rXNM0742cDXOc5rRvjvwvdmhbd9E6AsdDjBgoomkevhGUE+s8lPFUynxkcfiVoazsdpxPiSfign9OD+06g+EYHxVlVe003NXWO8A0fNWFAREQEREBERAREQEREBERB1riOK11Q8YnfIqjxbxSeQPxV8qm8VHM3xY4fBUKD9k/+Efkgtdrb1ml2s8Y3t+JXgUN4QW+BwvfmnSHWSMHuc8fzFYL0a9GlPY7M7Vd2oW1lxkmPocEreJlO3iIEjm97u/1bIKroLoxrJJqaoq6N7qyVolbC4YMbDyJz9XPifYFv1DZZrRQNZLK2EhvKPu9qkLU6hsdukq6moD6ic9ZI8kFz3H5/wDQC4usqKmtjraqLDic0tITgkj7b/ADw7vPAQfpp6WxxurpwDcJWERl/aMTe8n/AK9XiqPry0/SmlnXTqXt9Fdxh8gw+Rrj2jg74zg592y7vSJrm09HlJFX18D7zeK1x6iHi4GDh5u7+FoyByJJPmsX1B/pA6jvVHPSi1W2nhnaWO+vIcEY7yEHRuc0FTRPiY4GRpD2eY/6IXDb7VdNRGKktp6pgGZJiPqg9w9aq9hN0vV6ipIZDmR3aIYNh+S9PaO03R6fs8UbSHzOHE9xHegxe79HF+sNGyajuL52nfqieBxPqHIqq/S9QWGKoyXt232OV6cudBDcnmpk3hiaRGO5x8R+S87a8ghp78+aMAGVnG7HeeIgH2gIK3b6U3K/UVIBk1NTHHj+J4C/oBBGIaeOJowGNDR7AvEPRVb/AKT6WtOU5GQ2qErvJgLvyXuFB8TO4IJHfdaT8Fn8IzwexXm6SdXaap3hE75KlQtw9o8CEFh0yP3x3i8D4H+qnlDaZbi3SP8Avyk/AKZQEREBERAREQEREBERAREQfLxxRuHiCs/g+q8fgWgve2Nhc9wa0DJJOAFn8JaXP4SCCHYIOQUFmsDTLYJI2nBLntB8M/8AdQ7bwKSxUzaVodhmHlvJuNjv5hQdTc7sxzqChlfHD9Y9WMEkjvd/2Xd07HFTWaopZ2MaKZzuIcxj63t2PvCCAuGsaSwiWqhtczngkyT09GZXA8yefrX3adS1d1e6eGiqmumaHE1D2MkLe7bPZHsVio2Uz6NrI6cNY0dlpOSAeeT4n+iq1NRsseqayGKEupXs66NrR9QOOHDHhnB9pQUXpi0hqLUc9DdLfQtqIaSB0b4o5eOUkuzxYPPuG3uWHyQvimfFLG6ORhw5j2lrmn1g7heyorhSuYX9cBjchxwfiozXdHoXVelK+6VVBAblSwGRhc3q5g7u3H1hnHLKDPejTQ3U2qncIx6VIwVMpxvvsxvsGVo1LbKmrzGH4gb2XuB2d4gHw8SpOw2SpodItDwYqq4FjX45xsxy8+EH2lcmobiLPaxTUscMfCztPccMiHi4/kNz3IKzqO6iEfRdPlmG/pJR/q2ctvWeQHj5LJ6/ow1RrC5TVzDbqKAuwxj6jjLWtHZB4AQOQGM960qwULbrJPXVcT30vH+h60YdO/7Urh3D7LW9wz3q1UcNPTRS9RCyIBuDwtwgpfQv0LXXTWpYtUXqppP0cT2QU8Di85dsXOJAHLljPNb2utbouptlNH92NufcuygjNQycFnkb3yOawe/PyCq0exJ8ASpbUNc2arZSsOWw7vx9493sHzUWQeqIaMukIY0eJKC02CPq7LB4uy73kqRXHTQinpooRyjaG+4LkQEREBERAREQEREBERAREQefP9JnU9zt1fp62W+rmpW8MlW90Ty3icCGtz447Wx8V3Ojq8yVGhKS9XeuibLPxtJIEbThxbjGd3HHd48lr2o9I2DV1G2lvtrp6+Jh4mdY3DmH8Lhgj2Ffll0dp7T0UMdqtFLSiAERFrMuYCcnBOSMk5QQ9DY6ytjbJw9RE8Ah0gIJH8PP34SvtTbTcYI+Nz4bgx0DnOHKQDs+8Z9yuSi9SUhq7HNw/tIcTMPeC0529gI9qCj0N1p+rBe4RSAcMjT9lw2K+7JRHUeo62ogl4YqOAQh+Mgvc7ix7AB7wurqG2MjnlldBHNT1LOvbjZzTjtAEd2d8etWfo0oIqHQtG6NvCapz6l++clzjj+UN9yCIudhkgcfSISzwkZuD7VXqmzt9OoTM1slOKqMvzyxnbPtwtjc1r2lrgCDzB71l/THpy/P0nFU6Pgmkq4auOWemgxxSRtydsnP1g3IHPwQX2sHWUUcTHDj4gWEDke4rOrnHDfL26nrquJlLTycLKfrA1z355u32z3f9sWFl1qJrJSSvYI6tnFHLGCDwPbs4beByFSrxRtud1NW4sZUTMbwyho2cBgg+IOMEHnhBcam2SW+GFjoWwscOFjQRsB6h3L5ihy0Rjcyva38lEaenlmtcbXvd1TM8EZORGc4cB6shSdXWPt9Oypja10kbg5odyJztlBfpZoqaAySyMijYN3OOAPaqjeddU4Dqe2EvcdjUFvZb/CO8+vl5qm1VVX3mrMtRJJUSO5DfhHk3kFHtulug1rSaYqTM+4VUJmDY25a0AEgE+JDTsAgs1JM+Z3ZPFncuzn2lWiw0JqaltU8foYNmZ+07x9i4bVpp7g0zM9HgG/ANnO/p81ao42QxtjjaGsaMADkEH0iIgIiICIiAiIgIiICIiAiIgIiIC/CAWkEZB5qJvupKGwQF9QJZpeAvbBA3ikcB6v6qqW3VmoNWs4qeibY6A7GZzxLO4erbhb/ADIO7X07JdOzUjuKSSic6NrsYOG5A/lwu90d1cNTomjZE/iNPxQu9WHHHwIK6M9TSU1B6JSVDXOALS8v4nEnmSTzPrXJoS2mgNS6DPoj2tGTye8FxJHsIGf6ILii4qmqgpIHTVEzIY283PdgKoXbpAiZxRWqHrXcuulBDfYOZ9uEENbTw68u1A54MT53VcY9UjRkf/JjveupeqQRmpbGO1HxSNx+F/8AzK6UlfnU9BcowY5OAxSgjmBkg5/xFSNRK4UNbVOB630IuDfxSPJx8ggiNP10zISYI+timle8Mx3Fx5Lv3q925tfb7RV1cdHVVxPUxybukI5gY29WSRkqw6d0pUw2qlpywU7I4mMc9w7TiAMnHn4qZi0PZTdKa5VtJHXV1ISaeaZgJhzz4Qgpmibbe7lfLzDW2n6OtlPI1tJWudxOqm75IHLwO2AM43IVttvR5YLbq2XUwp5Ki7yNEbKiZ/F1LOHh4WAYA27+e53VoAA5IgIiICIiAiIgIiICIiAiIgIiICIiAiIgqtZpmaqu9RUyDr+tdkccnCwDuBAGTttjkpKmse4FSY+paNoIhhp8z3+Ww81MLKemTphk6O5KO22ujgrLpVMMzuuceCGPOASBzJIOPJBpNVHbKOn66qjpoYmfae1oAVWuuv44wYbTB1mNuulGGjybzPtwsnsPSTS66qWMnqZWXQ8qad25/wB3jYj1DB9SudNZ3HD6h3APujn/AMkHVqqyuu1SJKqaSpk7geQ8hyC7VNZjs6odwD7o5qx2ywTzsHUQiCI85H9/5lWahsdJRYeW9dKPtv7vIdyCi19okgtkc7afqWF/Vsc4buc5paPX3r7tdPJVawbSPZiAdU4k9/AS/HwCs+qnskfb6TrmxSdcZ8nwa0j5uCrUl0fadR2urme2WOaqFM4tHdIC0H2Hh9mUGjoiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAsu6Wehin6RJWXSjrnUN5ghELDJ2oZWgkhrhzbuT2h7QVqKIPJmhuhTXNP0g0MtZa20NPbapkstTLK3q3gHP6PGS7I9Xnhen6GwUlJh7x18o+08bDyClEQF8ySMhidJI9rGMBc5zjgADmSV9Kr67prpX2QUVuh62KYkVDRnL2gbMGOXEeZ5YGO9BV626fTV9nuXA4U5YI6fI/1YyeLH4iSfLC4LLa3ai1fSMMn6pbj6TMPEg9hvtIz5Ar5pNGXwS8XFPgntF4Ha5b4OPA/y+Cv+m7A2x0knG5r6moIdK5o22GAB6hv7ygmkREBERAREQEREBERBF3u7st0HBHLGKpwDmMdvlvG0E49qpEevrw65WuAtpuCql4JP0ZzjrizbfwCvV4tguFG9sbIhUHhDZHDcAPDiM8+5UhnR9dm3K2Tmak4KSTjf23ZI64v228CguE1fcvpCaCGFnAyWNod1TnDgdzOcjce7GF0I73fHxDitzWSmNzg0xPwXbcIzn1/Du5LvVFrrp68OM49HFR1vCJHA8JYG8PLuIz7e5dU2S6kBxrw+TqnMz1jgM5HCcfwgZ9ZKD6berpI9w9BdCS1/A10LnZI48ZORgdkD1lwPIhduhr7jLXiCppA2LhJMoaQCeFhxgnbdzh7FKM4uAcYAdjcA5GV9IP/2Q==",
 };
 
-const EMOJI_FB = { calfRaise: "👟" };
+const EMOJI_FB = {
+  calfRaise: "👟",
+  // Exercices sans matériel ("Maison") : pas de photo disponible pour l'instant, on retombe
+  // sur un émoji distinct par exercice — la fiche info (muscles/conseils) reste complète.
+  bodyweightSquat: "🦵", lunges: "🚶", gluteBridge: "🍑", burpees: "🔥",
+  plank: "🧱", mountainClimbers: "🏃", bicycleCrunch: "🚲",
+  chairDips: "🪑", superman: "🦸", jumpingJacks: "🤸"
+};
 
 // ================== CONSEILS PAR EXERCICE ==================
 const EXERCISE_TIPS = {
@@ -2091,6 +2111,126 @@ const EXERCISE_TIPS = {
       "Verrouiller brutalement les coudes en haut."
     ]
   },
+  bodyweightSquat: {
+    muscles: "Quadriceps, fessiers, ischio-jambiers en soutien.",
+    tips: [
+      "Pieds largeur d'épaules, pointes légèrement vers l'extérieur.",
+      "Descends comme pour t'asseoir sur une chaise, poids sur les talons.",
+      "Genoux dans l'axe des pieds, poitrine haute."
+    ],
+    mistakes: [
+      "Genoux qui rentrent vers l'intérieur.",
+      "Talons qui décollent du sol."
+    ]
+  },
+  lunges: {
+    muscles: "Quadriceps, fessiers, stabilisateurs de hanche.",
+    tips: [
+      "Grand pas en avant, descends jusqu'à ce que le genou arrière frôle le sol.",
+      "Buste droit, garde le poids réparti entre les deux jambes.",
+      "Pousse sur le talon avant pour revenir."
+    ],
+    mistakes: [
+      "Genou avant qui dépasse trop la pointe du pied.",
+      "Pas trop court, qui limite l'amplitude."
+    ]
+  },
+  gluteBridge: {
+    muscles: "Fessiers, ischio-jambiers, bas du dos en stabilisation.",
+    tips: [
+      "Allongé, pieds à plat proches des fessiers.",
+      "Pousse par les talons, contracte les fessiers en haut du mouvement.",
+      "Redescends lentement sans reposer complètement le bassin."
+    ],
+    mistakes: [
+      "Cambrer le bas du dos plutôt que de solliciter les fessiers.",
+      "Aller trop vite, sans temps de contraction en haut."
+    ]
+  },
+  burpees: {
+    muscles: "Full body — jambes, pectoraux, épaules, gainage, cardio.",
+    tips: [
+      "Squat, mains au sol, saute les pieds en position de pompe.",
+      "Fais une pompe (optionnel selon niveau), ramène les pieds, saute en extension.",
+      "Garde un rythme régulier plutôt que de tout donner sur les 2 premières."
+    ],
+    mistakes: [
+      "Dos qui s'affaisse pendant la phase de pompe/planche.",
+      "Réception des sauts trop raide, sans amortir avec les genoux."
+    ]
+  },
+  plank: {
+    muscles: "Gainage complet : abdos, lombaires, épaules.",
+    tips: [
+      "Avant-bras au sol, corps aligné de la tête aux talons.",
+      "Contracte les abdos et les fessiers, ne laisse pas les hanches tomber.",
+      "Respire normalement, ne bloque pas ta respiration."
+    ],
+    mistakes: [
+      "Hanches qui montent trop haut (ça enlève le travail des abdos).",
+      "Bas du dos qui s'affaisse."
+    ]
+  },
+  mountainClimbers: {
+    muscles: "Abdos (surtout bas), fléchisseurs de hanche, cardio.",
+    tips: [
+      "Position de planche haute, mains sous les épaules.",
+      "Ramène un genou vers la poitrine puis alterne rapidement.",
+      "Garde les hanches basses et stables, sans les faire remonter."
+    ],
+    mistakes: [
+      "Hanches qui montent et descendent au lieu de rester stables.",
+      "Aller trop vite au détriment de l'amplitude."
+    ]
+  },
+  bicycleCrunch: {
+    muscles: "Grand droit de l'abdomen et obliques.",
+    tips: [
+      "Allongé, mains derrière la tête, jambes en l'air genoux pliés.",
+      "Amène le coude vers le genou opposé en pédalant, buste qui pivote.",
+      "Contrôle le mouvement, ne tire pas sur la tête avec les mains."
+    ],
+    mistakes: [
+      "Tirer sur la nuque pour aller plus vite.",
+      "Mouvement trop rapide, sans contraction réelle des obliques."
+    ]
+  },
+  chairDips: {
+    muscles: "Triceps, avant d'épaule en soutien.",
+    tips: [
+      "Mains sur le bord d'une chaise stable, jambes tendues devant toi.",
+      "Descends en pliant les coudes vers l'arrière, pas vers l'extérieur.",
+      "Remonte en poussant sur les paumes, sans verrouiller brutalement les coudes."
+    ],
+    mistakes: [
+      "Épaules qui remontent vers les oreilles.",
+      "Descendre trop bas si les épaules sont sensibles."
+    ]
+  },
+  superman: {
+    muscles: "Lombaires (bas du dos), fessiers en soutien.",
+    tips: [
+      "Allongé sur le ventre, bras tendus devant toi.",
+      "Soulève bras et jambes en même temps, regarde le sol pour protéger la nuque.",
+      "Tiens 1-2 sec en haut puis redescends contrôlé."
+    ],
+    mistakes: [
+      "Lever la tête au lieu de garder le regard vers le sol.",
+      "Mouvement trop brusque, façon \"rebond\"."
+    ]
+  },
+  jumpingJacks: {
+    muscles: "Épaules, mollets, cardio-vasculaire.",
+    tips: [
+      "Pieds joints, bras le long du corps pour démarrer.",
+      "Saute en écartant pieds et bras en même temps, referme en sautant.",
+      "Reste sur la pointe des pieds pour amortir."
+    ],
+    mistakes: [
+      "Réception trop raide, genoux verrouillés.",
+      "Bras qui ne montent pas complètement au-dessus de la tête."
+    ]
+  },
 };
 
 
@@ -2145,7 +2285,18 @@ const EXERCISE_LIBRARY = [
   { icon: "machineShoulderPress", name: "Développé épaules machine", cat: "Épaules", sets: "3 × 10", setsCount: 3, repsMax: 10, rest: "90 sec", weight: 20 },
   { icon: "barbellCurl", name: "Curl barre", cat: "Biceps", sets: "3 × 10", setsCount: 3, repsMax: 10, rest: "60 sec", weight: 15 },
   { icon: "closeGripBenchPress", name: "Développé couché prise serrée", cat: "Triceps", sets: "3 × 10", setsCount: 3, repsMax: 10, rest: "90 sec", weight: 20 },
-  { icon: "lyingTricepExtension", name: "Extension triceps allongé", cat: "Triceps", sets: "3 × 10-12", setsCount: 3, repsMax: 12, rest: "60 sec", weight: 15 }
+  { icon: "lyingTricepExtension", name: "Extension triceps allongé", cat: "Triceps", sets: "3 × 10-12", setsCount: 3, repsMax: 12, rest: "60 sec", weight: 15 },
+  // --- Sans matériel (jour "Maison") ---
+  { icon: "bodyweightSquat", name: "Squats", cat: "Jambes", sets: "4 × 15-20", setsCount: 4, repsMax: 20, rest: "60 sec", weight: 0, weightLabel: "Poids du corps" },
+  { icon: "lunges", name: "Fentes avant", cat: "Jambes", sets: "3 × 12 / jambe", setsCount: 3, repsMax: 12, rest: "60 sec", weight: 0, weightLabel: "Poids du corps" },
+  { icon: "gluteBridge", name: "Pont fessier", cat: "Jambes", sets: "3 × 15", setsCount: 3, repsMax: 15, rest: "45 sec", weight: 0, weightLabel: "Poids du corps" },
+  { icon: "burpees", name: "Burpees", cat: "Jambes", sets: "3 × 10", setsCount: 3, repsMax: 10, rest: "60 sec", weight: 0, weightLabel: "Poids du corps" },
+  { icon: "plank", name: "Planche", cat: "Abdos", sets: "3 × 45 sec", setsCount: 3, repsMax: 45, rest: "45 sec", weight: 0, weightLabel: "Poids du corps" },
+  { icon: "mountainClimbers", name: "Mountain climbers", cat: "Abdos", sets: "3 × 30 sec", setsCount: 3, repsMax: 30, rest: "45 sec", weight: 0, weightLabel: "Poids du corps" },
+  { icon: "bicycleCrunch", name: "Crunch vélo", cat: "Abdos", sets: "3 × 20", setsCount: 3, repsMax: 20, rest: "45 sec", weight: 0, weightLabel: "Poids du corps" },
+  { icon: "chairDips", name: "Dips sur chaise", cat: "Triceps", sets: "3 × 12-15", setsCount: 3, repsMax: 15, rest: "60 sec", weight: 0, weightLabel: "Poids du corps" },
+  { icon: "superman", name: "Superman (extension dorsale)", cat: "Dos", sets: "3 × 15", setsCount: 3, repsMax: 15, rest: "45 sec", weight: 0, weightLabel: "Poids du corps" },
+  { icon: "jumpingJacks", name: "Jumping jacks", cat: "Épaules", sets: "3 × 30 sec", setsCount: 3, repsMax: 30, rest: "30 sec", weight: 0, weightLabel: "Poids du corps" }
 ];
 
 function getLibraryItem(icon) {
@@ -2358,7 +2509,17 @@ const EXERCISE_MUSCLE_MAP = {
   sumoDeadlift: { glutes: 1, quads: 0.6, adductors: 0.6, hamstrings: 0.7, lower_back: 0.5 },
   lyingLegCurl: { hamstrings: 1 },
   declineBenchPress: { chest_lower: 1, triceps_lateral: 0.3 },
-  machineShoulderPress: { shoulder_front: 1, shoulder_side: 0.3, triceps_lateral: 0.2 }
+  machineShoulderPress: { shoulder_front: 1, shoulder_side: 0.3, triceps_lateral: 0.2 },
+  bodyweightSquat: { quads: 1, glutes: 0.7, hamstrings: 0.3 },
+  lunges: { quads: 1, glutes: 0.6, hamstrings: 0.3, adductors: 0.2 },
+  gluteBridge: { glutes: 1, hamstrings: 0.4 },
+  burpees: { quads: 0.6, chest_lower: 0.4, shoulder_front: 0.4, abs_upper: 0.3 },
+  plank: { abs_upper: 0.8, abs_lower: 0.8, obliques: 0.4, shoulder_front: 0.2 },
+  mountainClimbers: { abs_lower: 0.8, hip_flexor: 0.5, shoulder_front: 0.3 },
+  bicycleCrunch: { abs_upper: 0.7, obliques: 1 },
+  chairDips: { triceps_lateral: 1, triceps_long: 0.6, chest_lower: 0.2 },
+  superman: { lower_back: 1, glutes: 0.3 },
+  jumpingJacks: { shoulder_side: 0.5, calves: 0.3 }
 };
 
 // ================== CARTE MUSCULAIRE (corps face/dos colorié selon le volume) ==================
@@ -2565,6 +2726,7 @@ const SVG = {
 
 document.getElementById('appleIcon').href = IMAGES.logo || '';
 
+const NUM_DAYS = 5;
 const WORKOUT = {
   1: {
     name: "Push",
@@ -2634,6 +2796,14 @@ const WORKOUT = {
         ]}
     ],
     cooldown: { title: "Fin de séance", duration: "10 min", details: "Tapis · inclinaison 5%" }
+  },
+  5: {
+    name: "🏠 Maison",
+    warmup: { title: "Échauffement", duration: "5 min", details: "Jumping jacks · rotations d'épaules et de hanches · montées de genoux 30 sec" },
+    sections: [
+      { title: "Exercices", exercises: [] }
+    ],
+    cooldown: { title: "Retour au calme", duration: "5 min", details: "Étirements au sol : ischios, quadriceps, dos, épaules" }
   }
 };
 
@@ -2698,6 +2868,7 @@ function loadState() {
   return {
     counters: { 1: 0, 2: 0, 3: 0, 4: 0 },
     weights: {}, feelings: {}, comments: {}, done: {}, setsDone: {}, // { exId: nb de séries faites }
+    skipped: {}, // { exId: true } — exercices "passés" cette séance, ne bloquent pas la fin de séance
     history: {}, // { exId: [{ date, weight }] }
     orders: {},  // { day: [exId, ...] randomized order per section concatenated }
     openDay: null,
@@ -2746,6 +2917,7 @@ function migrateState(s) {
   s.comments = s.comments || {};
   s.done = s.done || {};
   s.setsDone = s.setsDone || {};
+  s.skipped = s.skipped || {};
   s.history = s.history || {};
   s.orders = s.orders || {};
   s.sessionStart = s.sessionStart || {};
@@ -2896,7 +3068,8 @@ const CONFETTI_COLORS = {
   1: ['#ff5555', '#ff8080', '#ffaaaa', '#7c4dff', '#a78bfa', '#ffcc88'],
   2: ['#5b8cff', '#80a8ff', '#a8c4ff', '#7c4dff', '#a78bfa', '#88e0ff'],
   3: ['#4ade80', '#6bf0a0', '#a0f5c0', '#7c4dff', '#a78bfa', '#88ffaa'],
-  4: ['#fbbf24', '#fcd34d', '#fde68a', '#7c4dff', '#a78bfa', '#ffcc00']
+  4: ['#fbbf24', '#fcd34d', '#fde68a', '#7c4dff', '#a78bfa', '#ffcc00'],
+  5: ['#22d3ee', '#67e8f9', '#a5f3fc', '#7c4dff', '#a78bfa', '#88e0ff']
 };
 
 function spawnConfetti(parent, day, count = 40) {
@@ -2951,7 +3124,7 @@ function spawnConfetti(parent, day, count = 40) {
 
 // ================== DAY/EXO RENDERING ==================
 function getExoById(id) {
-  for (let d = 1; d <= 4; d++) {
+  for (let d = 1; d <= NUM_DAYS; d++) {
     for (const sec of WORKOUT[d].sections) {
       const ex = sec.exercises.find(e => e.id === id);
       if (ex) return { exo: ex, day: d };
@@ -2963,7 +3136,7 @@ function getExoById(id) {
 function renderDays() {
   const container = document.getElementById('days');
   container.innerHTML = '';
-  for (let d = 1; d <= 4; d++) {
+  for (let d = 1; d <= NUM_DAYS; d++) {
     const day = WORKOUT[d];
     const dayEl = document.createElement('article');
     dayEl.className = 'day';
@@ -3042,7 +3215,7 @@ function renderDays() {
   renderDayTabs();
   updateAllProgress();
   requestAnimationFrame(() => {
-    const target = state.openDay && state.openDay >= 1 && state.openDay <= 4 ? state.openDay : 1;
+    const target = state.openDay && state.openDay >= 1 && state.openDay <= NUM_DAYS ? state.openDay : 1;
     const el = container.querySelector(`.day[data-day="${target}"]`);
     if (el) container.scrollTo({ left: el.offsetLeft, behavior: 'instant' in document.documentElement.style ? 'instant' : 'auto' });
   });
@@ -3052,9 +3225,9 @@ function renderDays() {
 function renderDayTabs() {
   const tabs = document.getElementById('dayTabs');
   if (!tabs) return;
-  const current = state.openDay && state.openDay >= 1 && state.openDay <= 4 ? state.openDay : 1;
+  const current = state.openDay && state.openDay >= 1 && state.openDay <= NUM_DAYS ? state.openDay : 1;
   tabs.innerHTML = '';
-  for (let d = 1; d <= 4; d++) {
+  for (let d = 1; d <= NUM_DAYS; d++) {
     const btn = document.createElement('div');
     btn.className = 'day-tab' + (d === current ? ' active' : '');
     btn.dataset.day = d;
@@ -3125,6 +3298,7 @@ function renderExercise(ex, day) {
   el.className = 'exercise';
   el.id = ex.id;
   if (state.done[ex.id]) el.classList.add('done');
+  if (state.skipped[ex.id]) el.classList.add('skipped');
 
   const currentWeight = state.weights[ex.id] !== undefined ? state.weights[ex.id] : ex.weight;
   const currentFeel = state.feelings[ex.id] || '';
@@ -3145,6 +3319,7 @@ function renderExercise(ex, day) {
         <div class="ex-num-row">
           <div class="ex-check" onclick="toggleDone('${ex.id}', event)">${SVG.check}</div>
           <button class="ex-info-btn" onclick="openExerciseInfo('${ex.id}')" aria-label="Infos exercice">i</button>
+          <button class="ex-skip-btn" onclick="togglePasser('${ex.id}', event)" aria-label="Passer cet exercice">⏭ Passer</button>
         </div>
         <div class="ex-name">${ex.name}</div>
         <div class="ex-meta">
@@ -3397,7 +3572,7 @@ function removeEditorExercise(i) {
 // filtrent le state via ce préfixe — il faut le respecter pour les nouveaux exercices aussi.
 function nextExerciseId(day) {
   const existingIds = [];
-  for (let d = 1; d <= 4; d++) {
+  for (let d = 1; d <= NUM_DAYS; d++) {
     WORKOUT[d].sections.forEach(sec => sec.exercises.forEach(ex => existingIds.push(ex.id)));
   }
   if (editorDraft) editorDraft.exercises.forEach(ex => existingIds.push(ex.id));
@@ -3555,6 +3730,11 @@ function toggleDone(id, ev) {
   ev.stopPropagation();
   const was = !!state.done[id];
   state.done[id] = !was;
+  if (state.done[id] && state.skipped[id]) {
+    delete state.skipped[id];
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('skipped');
+  }
   const info = getExoById(id);
   const day = info ? info.day : null;
 
@@ -3580,13 +3760,41 @@ function toggleDone(id, ev) {
 function isDayComplete(day) {
   const all = [];
   WORKOUT[day].sections.forEach(sec => sec.exercises.forEach(ex => all.push(ex.id)));
-  return all.every(id => state.done[id]);
+  // Un exercice "passé" compte comme résolu : il ne doit pas bloquer la fin de séance.
+  return all.length > 0 && all.every(id => state.done[id] || state.skipped[id]);
+}
+
+// "Passer" un exercice : ne compte pas comme fait (pas d'historique/PR/impact sur la carte
+// musculaire de la séance — la même logique que "non fait" côté données), mais ne bloque plus
+// la fin de séance. Bascule aussi : re-cliquer annule le skip.
+function togglePasser(id, ev) {
+  if (ev) ev.stopPropagation();
+  const was = !!state.skipped[id];
+  if (was) {
+    delete state.skipped[id];
+  } else {
+    state.skipped[id] = true;
+    if (state.done[id]) delete state.done[id];
+  }
+  saveState();
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.toggle('skipped', !was);
+    el.classList.toggle('done', !!state.done[id]);
+  }
+  updateAllProgress();
+  vibrate(15);
+  const info = getExoById(id);
+  const day = info ? info.day : null;
+  if (day && !was && isDayComplete(day)) {
+    setTimeout(() => showSessionRecap(day), 400);
+  }
 }
 
 // Si une séance était terminée (tous les exos cochés) mais que le récap n'a jamais été
 // validé/fermé (appli quittée avant), on le rouvre au retour au lieu de le perdre.
 function checkPendingRecaps() {
-  for (let d = 1; d <= 4; d++) {
+  for (let d = 1; d <= NUM_DAYS; d++) {
     if (state.sessionStart[d] && isDayComplete(d)) {
       showSessionRecap(d);
       break;
@@ -3630,16 +3838,21 @@ let _lastResetSnapshot = null;
 function resetDay(d) {
   const doneSnapshot = {};
   const setsSnapshot = {};
+  const skippedSnapshot = {};
   Object.keys(state.done).forEach(k => {
     if (k.startsWith(`d${d}e`)) doneSnapshot[k] = state.done[k];
   });
   Object.keys(state.setsDone).forEach(k => {
     if (k.startsWith(`d${d}e`)) setsSnapshot[k] = state.setsDone[k];
   });
+  Object.keys(state.skipped).forEach(k => {
+    if (k.startsWith(`d${d}e`)) skippedSnapshot[k] = state.skipped[k];
+  });
   _lastResetSnapshot = {
     day: d,
     done: doneSnapshot,
     sets: setsSnapshot,
+    skipped: skippedSnapshot,
     sessionStart: state.sessionStart[d],
     lastActivity: state.lastActivity[d]
   };
@@ -3650,11 +3863,14 @@ function resetDay(d) {
   Object.keys(state.setsDone).forEach(k => {
     if (k.startsWith(`d${d}e`)) delete state.setsDone[k];
   });
+  Object.keys(state.skipped).forEach(k => {
+    if (k.startsWith(`d${d}e`)) delete state.skipped[k];
+  });
   delete state.sessionStart[d];
   delete state.lastActivity[d];
   saveState();
   document.querySelectorAll(`[id^="d${d}e"]`).forEach(el => {
-    el.classList.remove('done');
+    el.classList.remove('done', 'skipped');
     const sc = el.querySelector('.sets-counter-value');
     if (sc) sc.textContent = '0';
   });
@@ -3668,12 +3884,14 @@ function undoResetDay(d) {
   const snap = _lastResetSnapshot;
   Object.keys(snap.done).forEach(k => { state.done[k] = snap.done[k]; });
   Object.keys(snap.sets || {}).forEach(k => { state.setsDone[k] = snap.sets[k]; });
+  Object.keys(snap.skipped || {}).forEach(k => { state.skipped[k] = snap.skipped[k]; });
   if (snap.sessionStart) state.sessionStart[d] = snap.sessionStart;
   if (snap.lastActivity) state.lastActivity[d] = snap.lastActivity;
   _lastResetSnapshot = null;
   saveState();
   document.querySelectorAll(`[id^="d${d}e"]`).forEach(el => {
     el.classList.toggle('done', !!state.done[el.id]);
+    el.classList.toggle('skipped', !!state.skipped[el.id]);
     const sc = el.querySelector('.sets-counter-value');
     if (sc) sc.textContent = state.setsDone[el.id] || 0;
   });
@@ -3683,12 +3901,15 @@ function undoResetDay(d) {
 }
 
 function updateAllProgress() {
-  for (let d = 1; d <= 4; d++) {
+  for (let d = 1; d <= NUM_DAYS; d++) {
     const total = WORKOUT[d].sections.reduce((s, sec) => s + sec.exercises.length, 0);
-    const done = Object.keys(state.done).filter(k => k.startsWith(`d${d}e`) && state.done[k]).length;
+    const resolvedIds = new Set();
+    Object.keys(state.done).forEach(k => { if (k.startsWith(`d${d}e`) && state.done[k]) resolvedIds.add(k); });
+    Object.keys(state.skipped).forEach(k => { if (k.startsWith(`d${d}e`) && state.skipped[k]) resolvedIds.add(k); });
+    const done = resolvedIds.size;
     const fill = document.getElementById(`progfill-${d}`);
     const prog = document.getElementById(`prog-${d}`);
-    if (fill) fill.style.width = `${(done/total) * 100}%`;
+    if (fill) fill.style.width = `${total > 0 ? (done/total) * 100 : 0}%`;
     if (prog) prog.textContent = `${done} / ${total} fait${done > 1 ? 's' : ''}`;
   }
 }
@@ -4133,6 +4354,9 @@ function closeRecap(validate) {
     Object.keys(state.setsDone).forEach(k => {
       if (k.startsWith(`d${d}e`)) delete state.setsDone[k];
     });
+    Object.keys(state.skipped).forEach(k => {
+      if (k.startsWith(`d${d}e`)) delete state.skipped[k];
+    });
     delete state.sessionStart[d];
     delete state.lastActivity[d];
     // Reshuffle for next time
@@ -4371,12 +4595,12 @@ const SHOP_TITLE_FRAMES = [
 
 // ================== PALETTES DES JOURS ==================
 const SHOP_DAY_PALETTES = [
-  { id: "default",    name: "Classique",   desc: "Rouge / Bleu / Vert / Jaune",          preview: "🎨", colors: ["#ff5555","#5b8cff","#4ade80","#fbbf24"] },
-  { id: "neon",       name: "Néon",        desc: "Magenta / Cyan / Lime / Orange",       preview: "🌈", colors: ["#ec4899","#06b6d4","#a3e635","#fb923c"] },
-  { id: "pastel",     name: "Pastel",      desc: "Doux et apaisant",                     preview: "🎐", colors: ["#fca5a5","#93c5fd","#86efac","#fde68a"] },
-  { id: "sunset",     name: "Sunset",      desc: "Coucher de soleil",                     preview: "🌅", colors: ["#f97316","#a855f7","#ec4899","#fb7185"] },
-  { id: "mono",       name: "Monochrome",  desc: "4 nuances de violet",                  preview: "🟣", colors: ["#a78bfa","#8b5cf6","#7c3aed","#6d28d9"] },
-  { id: "ocean",      name: "Océan",       desc: "Toutes les nuances de bleu",            preview: "🌊", colors: ["#22d3ee","#3b82f6","#2563eb","#1e40af"] }
+  { id: "default",    name: "Classique",   desc: "Rouge / Bleu / Vert / Jaune / Cyan",   preview: "🎨", colors: ["#ff5555","#5b8cff","#4ade80","#fbbf24","#22d3ee"] },
+  { id: "neon",       name: "Néon",        desc: "Magenta / Cyan / Lime / Orange / Fuchsia", preview: "🌈", colors: ["#ec4899","#06b6d4","#a3e635","#fb923c","#d946ef"] },
+  { id: "pastel",     name: "Pastel",      desc: "Doux et apaisant",                     preview: "🎐", colors: ["#fca5a5","#93c5fd","#86efac","#fde68a","#c4b5fd"] },
+  { id: "sunset",     name: "Sunset",      desc: "Coucher de soleil",                     preview: "🌅", colors: ["#f97316","#a855f7","#ec4899","#fb7185","#fdba74"] },
+  { id: "mono",       name: "Monochrome",  desc: "5 nuances de violet",                  preview: "🟣", colors: ["#a78bfa","#8b5cf6","#7c3aed","#6d28d9","#c4b5fd"] },
+  { id: "ocean",      name: "Océan",       desc: "Toutes les nuances de bleu",            preview: "🌊", colors: ["#22d3ee","#3b82f6","#2563eb","#1e40af","#67e8f9"] }
 ];
 
 // ================== XP / LEVEL ==================
@@ -4574,7 +4798,7 @@ function openDayDetail(dateKey) {
 // ================== STATS VIEW ==================
 function allProgramExercises() {
   const all = [];
-  for (let d = 1; d <= 4; d++) {
+  for (let d = 1; d <= NUM_DAYS; d++) {
     WORKOUT[d].sections.forEach(sec => sec.exercises.forEach(ex => all.push({ ...ex, day: d })));
   }
   return all;
@@ -4604,19 +4828,19 @@ function renderStats() {
   }
 
   // Day breakdown
-  const sessionsByDay = [0, 0, 0, 0, 0];
-  const tonnageByDay = [0, 0, 0, 0, 0];
+  const sessionsByDay = [0, 0, 0, 0, 0, 0];
+  const tonnageByDay = [0, 0, 0, 0, 0, 0];
   (state.sessionHistory || []).forEach(h => {
-    if (h.day >= 1 && h.day <= 4) {
+    if (h.day >= 1 && h.day <= NUM_DAYS) {
       sessionsByDay[h.day]++;
       tonnageByDay[h.day] += (h.tonnage || 0);
     }
   });
   const maxSessions = Math.max(...sessionsByDay.slice(1), 1);
-  const dayColors = ['', '#ff5555', '#5b8cff', '#4ade80', '#fbbf24'];
+  const dayColors = ['', '#ff5555', '#5b8cff', '#4ade80', '#fbbf24', '#22d3ee'];
 
   let dayBreakdownHtml = '<div class="day-breakdown">';
-  for (let d = 1; d <= 4; d++) {
+  for (let d = 1; d <= NUM_DAYS; d++) {
     const pct = (sessionsByDay[d] / maxSessions) * 100;
     dayBreakdownHtml += `
       <div class="day-breakdown-row">
@@ -5103,6 +5327,7 @@ function applyDayPalette() {
     CONFETTI_COLORS[2] = [pal.colors[1], pal.colors[1] + 'cc', '#ffffff', pal.colors[1]];
     CONFETTI_COLORS[3] = [pal.colors[2], pal.colors[2] + 'cc', '#ffffff', pal.colors[2]];
     CONFETTI_COLORS[4] = [pal.colors[3], pal.colors[3] + 'cc', '#ffffff', pal.colors[3]];
+    if (pal.colors[4]) CONFETTI_COLORS[5] = [pal.colors[4], pal.colors[4] + 'cc', '#ffffff', pal.colors[4]];
   }
 }
 
