@@ -113,14 +113,13 @@ body {
 
 .days-container {
   display: flex; align-items: flex-start;
-  overflow-x: auto; scroll-snap-type: x mandatory;
+  overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none; padding-top: 14px;
 }
 .days-container::-webkit-scrollbar { display: none; }
 .day {
   flex: 0 0 100%; width: 100%; box-sizing: border-box;
-  scroll-snap-align: start; scroll-snap-stop: always;
   padding: 0 18px 18px;
 }
 .day[data-day="1"] { --accent: var(--accent-1); }
@@ -816,6 +815,10 @@ body[data-active-view="calendar"] #profileBar { display: none; }
 #statsProgramBodyMap { display: block; } /* toujours visible dans l'onglet Stats, pas de toggle */
 .body-map-svg { display: block; width: 100%; max-width: 320px; height: auto; margin: 0 auto 14px; filter: drop-shadow(0 0 16px rgba(124, 77, 255, 0.15)); }
 .body-map-svg.small { max-width: 200px; margin-bottom: 10px; }
+.intensity-legend { max-width: 320px; margin: -6px auto 14px; }
+.intensity-legend.small { max-width: 200px; margin-top: -8px; }
+.intensity-legend-bar { height: 7px; border-radius: 4px; background: linear-gradient(90deg, #3d3168, #6d28d9, #c026d3, #fb7185, #fde047); }
+.intensity-legend-labels { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 8.5px; color: var(--text-faint); letter-spacing: 0.3px; margin-top: 4px; }
 .bm-part { stroke: rgba(255, 255, 255, 0.08); stroke-width: 0.15; transition: fill 0.4s ease; }
 .bm-legend { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
 .bm-row { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 3px 4px; border-radius: 6px; transition: background 0.15s; }
@@ -2412,7 +2415,13 @@ function renderBodyMapSVG(scores, small) {
     const fill = idColor[m.id] || baseColor;
     return `<path class="bm-part" d="${m.d}" fill="${fill}" stroke="rgba(8, 5, 20, 0.6)" stroke-width="0.35"></path>`;
   }).join('');
-  return `<svg viewBox="0 0 74 93" class="body-map-svg${small ? ' small' : ''}" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
+  const svg = `<svg viewBox="0 0 74 93" class="body-map-svg${small ? ' small' : ''}" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
+  const legend = `
+    <div class="intensity-legend${small ? ' small' : ''}">
+      <div class="intensity-legend-bar"></div>
+      <div class="intensity-legend-labels"><span>Peu travaillé</span><span>Beaucoup travaillé</span></div>
+    </div>`;
+  return svg + legend;
 }
 
 // containerId sert de clé pour retrouver, au clic sur une catégorie, quels exercices
@@ -3043,6 +3052,11 @@ function goToDay(d) {
 
 // Détecte quel jour est actuellement visible dans le carousel (scroll-snap) et
 // met à jour l'onglet actif + state.openDay en conséquence.
+// Le "snap" au jour le plus proche est fait ici en JS plutôt qu'avec la propriété CSS
+// scroll-snap-type : cette dernière capture l'axe du geste tactile sur certains navigateurs
+// mobiles (Safari iOS, Samsung Internet...) et bloquait le scroll vertical de toute la page,
+// puisque le carousel occupe toute la largeur/hauteur visible. Un scrollTo() déclenché une fois
+// le scroll horizontal terminé donne le même effet visuel sans jamais toucher au geste vertical.
 function setupDayScrollTracking() {
   const container = document.getElementById('days');
   if (!container) return;
@@ -3051,11 +3065,14 @@ function setupDayScrollTracking() {
     clearTimeout(scrollTimeout);
     scrollTimeout = setTimeout(() => {
       const days = container.querySelectorAll('.day');
-      let closest = 1, closestDist = Infinity;
+      let closest = 1, closestEl = null, closestDist = Infinity;
       days.forEach(el => {
         const dist = Math.abs(el.offsetLeft - container.scrollLeft);
-        if (dist < closestDist) { closestDist = dist; closest = parseInt(el.dataset.day, 10); }
+        if (dist < closestDist) { closestDist = dist; closest = parseInt(el.dataset.day, 10); closestEl = el; }
       });
+      if (closestEl && closestDist > 2) {
+        container.scrollTo({ left: closestEl.offsetLeft, behavior: 'smooth' });
+      }
       if (state.openDay !== closest) {
         state.openDay = closest;
         saveState();
@@ -3063,7 +3080,7 @@ function setupDayScrollTracking() {
           t.classList.toggle('active', parseInt(t.dataset.day, 10) === closest);
         });
       }
-    }, 100);
+    }, 120);
   }, { passive: true });
 }
 
