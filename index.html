@@ -4875,6 +4875,28 @@ function closeDataOverlay() {
   document.getElementById('dataOverlay').classList.remove('active');
 }
 
+// Import automatique via #import=... dans l'URL (déposé par le bookmarklet de migration
+// depuis une ancienne origine — ex: l'ancien site Muscu — pour éviter le copier/coller manuel).
+function checkImportHash() {
+  const m = location.hash.match(/#import=([^&]+)/);
+  if (!m) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  let raw;
+  try {
+    raw = decodeURIComponent(escape(atob(decodeURIComponent(m[1]))));
+    JSON.parse(raw);
+  } catch(e) {
+    showToast('Import échoué : format invalide');
+    return;
+  }
+  customConfirm('Importer tes anciennes données ?', 'Des données ont été détectées depuis ton ancienne app. Elles vont remplacer tes données actuelles sur cet appareil. Impossible à annuler.').then(ok => {
+    if (!ok) return;
+    const migrated = migrateState(JSON.parse(raw));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    location.reload();
+  });
+}
+
 function equipItem(kind, id) {
   if (kind === 'theme')    { state.theme = id; applyTheme(); }
   if (kind === 'sound')    { state.timerSound = id; playTimerSound(); }
@@ -5370,6 +5392,7 @@ bindNav();
 restoreTimer();
 requestNotifPermission(); // prompt soon after load
 setTimeout(checkPendingRecaps, 500); // rouvre un récap resté en attente si l'appli a été quittée avant validation
+checkImportHash();
 
 // Service worker : permet d'utiliser reg.showNotification() (plus fiable que new Notification()
 // quand l'app est en arrière-plan sur Android) et pose les bases d'un futur push serveur.
