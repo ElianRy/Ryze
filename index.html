@@ -867,6 +867,12 @@ body[data-active-view="calendar"] #profileBar { display: none; }
 .bm-part { stroke: rgba(255, 255, 255, 0.08); stroke-width: 0.15; transition: fill 0.4s ease, opacity 0.15s ease; }
 .bm-clickable { cursor: pointer; }
 .bm-clickable:active { opacity: 0.65; }
+@keyframes bmFlash {
+  0% { filter: brightness(1); }
+  35% { filter: brightness(2.3) drop-shadow(0 0 3px rgba(255, 255, 255, 0.95)); }
+  100% { filter: brightness(1); }
+}
+.bm-flash { animation: bmFlash 0.5s ease-out; }
 .bm-legend { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
 .bm-row { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 3px 4px; border-radius: 6px; transition: background 0.15s; }
 .bm-row:active { background: rgba(124, 77, 255, 0.15); }
@@ -2608,11 +2614,29 @@ function computeMuscleScores(exercises) {
   return scores;
 }
 
+// Reverse lookup : clé de sous-groupe (MUSCLE_GROUP_IDS) -> catégorie majeure qui la contient.
+const GROUP_KEY_TO_CATEGORY = {};
+Object.entries(MAJOR_MUSCLE_CATEGORIES).forEach(([cat, keys]) => {
+  keys.forEach(k => { GROUP_KEY_TO_CATEGORY[k] = cat; });
+});
+
+// Colore par CATÉGORIE majeure (9 groupes, celle sur laquelle on clique), pas par sous-groupe
+// anatomique fin (27 clés) : avant, deux formes voisines de la même catégorie (ex. deux zones
+// d'épaule) pouvaient recevoir des couleurs différentes à cause d'un léger écart de score entre
+// sous-groupes, ce qui donnait l'impression trompeuse d'un effort très inégal alors qu'il s'agit
+// du même muscle. Toutes les formes d'une même catégorie partagent maintenant un seul score et
+// donc une seule couleur.
 function muscleScoresToIdColors(scores) {
-  const maxScore = Math.max(0, ...Object.values(scores));
+  const catScores = {};
+  Object.entries(MAJOR_MUSCLE_CATEGORIES).forEach(([cat, keys]) => {
+    catScores[cat] = keys.reduce((s, k) => s + (scores[k] || 0), 0);
+  });
+  const maxScore = Math.max(0, ...Object.values(catScores));
   const idColor = {};
   Object.entries(MUSCLE_GROUP_IDS).forEach(([key, ids]) => {
-    const t = maxScore > 0 ? (scores[key] || 0) / maxScore : 0;
+    const cat = GROUP_KEY_TO_CATEGORY[key];
+    const catScore = cat ? (catScores[cat] || 0) : 0;
+    const t = maxScore > 0 ? catScore / maxScore : 0;
     const color = intensityColor(t);
     ids.forEach(id => { idColor[id] = color; });
   });
@@ -2641,8 +2665,9 @@ function renderBodyMapSVG(scores, small, containerId) {
     const cat = PATH_ID_TO_CATEGORY[m.id];
     const clickable = cat && containerId;
     const cls = clickable ? ' bm-part bm-clickable' : ' bm-part';
-    const onclick = clickable ? ` onclick="showMuscleCategoryExercises('${cat}', '${containerId}')"` : '';
-    return `<path class="${cls}" d="${m.d}" fill="${fill}" stroke="rgba(8, 5, 20, 0.6)" stroke-width="0.35"${onclick}></path>`;
+    const dataCat = clickable ? ` data-cat="${cat}"` : '';
+    const onclick = clickable ? ` onclick="flashMusclePart(this, '${cat}', '${containerId}')"` : '';
+    return `<path class="${cls}" d="${m.d}" fill="${fill}" stroke="rgba(8, 5, 20, 0.6)" stroke-width="0.35"${dataCat}${onclick}></path>`;
   }).join('');
   // Le tracé remplit tout le viewBox d'origine (0 0 74 93) sans la moindre marge : la tête touche
   // littéralement le bord haut, donc le premier conteneur venu (header collant, coin arrondi...)
@@ -2697,6 +2722,15 @@ function updateBodyMap(containerId, exercises) {
   el.innerHTML = renderBodyMapSVG(scores, false, containerId) + renderMuscleLegend(scores, containerId);
 }
 
+// Petit flash lumineux sur TOUTE la zone (toutes les formes anatomiques de la même catégorie,
+// pas juste celle cliquée) pour confirmer visuellement le clic avant que la pop-up ne s'ouvre.
+function flashMusclePart(el, cat, containerId) {
+  const svg = el.closest('svg');
+  const parts = svg ? svg.querySelectorAll(`path[data-cat="${CSS.escape(cat)}"]`) : [el];
+  parts.forEach(p => { p.classList.remove('bm-flash'); void p.offsetWidth; p.classList.add('bm-flash'); });
+  setTimeout(() => showMuscleCategoryExercises(cat, containerId), 150);
+}
+
 function showMuscleCategoryExercises(catName, containerId) {
   const exercises = BODY_MAP_EXERCISES[containerId] || [];
   const keys = MAJOR_MUSCLE_CATEGORIES[catName] || [];
@@ -2706,7 +2740,10 @@ function showMuscleCategoryExercises(catName, containerId) {
     if (!map) return;
     let weight = 0;
     keys.forEach(k => { if (map[k] && map[k] > weight) weight = map[k]; });
-    if (weight > 0) matches.push({ ex, weight });
+    // Seuil à 0.4 : sous ce niveau, la contribution est trop marginale/accessoire pour que
+    // l'exercice ait vraiment sa place dans "ce qui travaille ce muscle" (ex. le Chest Press
+    // sollicite un peu les triceps, mais ce n'est pas un exercice de triceps).
+    if (weight >= 0.4) matches.push({ ex, weight });
   });
   matches.sort((a, b) => b.weight - a.weight);
   if (matches.length === 0) {
