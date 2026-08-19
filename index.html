@@ -165,10 +165,8 @@ body {
 .section-title::before { content: ''; width: 14px; height: 2px; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 
 .exercise { background: rgba(21, 16, 46, 0.7); border: 1px solid rgba(124, 77, 255, 0.12); border-radius: 16px; padding: 14px; margin-bottom: 10px; position: relative; transition: all 0.3s; }
-.exercise.done { opacity: 0.38; background: rgba(15, 10, 36, 0.5); }
-.exercise.done .ex-image-wrap { filter: grayscale(1); }
-.exercise.skipped { opacity: 0.5; border-style: dashed; border-color: rgba(251, 191, 36, 0.3); }
-.exercise.skipped .ex-image-wrap { filter: grayscale(0.7); }
+.exercise.done { opacity: 0.38; background: rgba(15, 10, 36, 0.5); filter: grayscale(1); }
+.exercise.skipped { opacity: 0.5; border-style: dashed; border-color: rgba(251, 191, 36, 0.3); filter: grayscale(0.7); }
 .ex-top { display: flex; gap: 12px; margin-bottom: 12px; }
 .ex-image-wrap { width: 78px; height: 78px; background: linear-gradient(135deg, var(--bg-4), var(--bg-2)); border: 1px solid var(--accent); border-radius: 14px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; box-shadow: inset 0 0 30px -10px var(--accent), 0 2px 12px rgba(0,0,0,0.4); }
 .ex-image-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -3141,7 +3139,7 @@ function changeCounter(day, delta) {
 
 // Nombre de séries déjà faites pour un exercice donné. Incrémenté automatiquement au
 // lancement du repos (voir startTimer), corrigeable à la main via les boutons -/+.
-function changeSets(exId, delta) {
+function changeSets(exId, delta, ev) {
   state.setsDone[exId] = Math.max(0, (state.setsDone[exId] || 0) + delta);
   saveState();
   const valueEl = document.getElementById(`sc-${exId}`);
@@ -3152,6 +3150,12 @@ function changeSets(exId, delta) {
     valueEl.classList.add('pop');
   }
   vibrate(15);
+  // Toutes les séries prévues sont faites mais l'exercice n'est pas encore coché -> on le coche.
+  if (!state.done[exId]) {
+    const info = getExoById(exId);
+    const target = info ? (info.exo.setsCount || 3) : 3;
+    if (state.setsDone[exId] >= target) markExerciseDone(exId, true, ev);
+  }
 }
 
 const CONFETTI_COLORS = {
@@ -3419,10 +3423,10 @@ function renderExercise(ex, day) {
         <div class="sets-counter">
           <span class="sets-counter-label">Séries faites</span>
           <div class="sets-counter-controls">
-            <button class="counter-btn" onclick="changeSets('${ex.id}', -1)">−</button>
+            <button class="counter-btn" onclick="changeSets('${ex.id}', -1, event)">−</button>
             <span class="sets-counter-value" id="sc-${ex.id}">${state.setsDone[ex.id] || 0}</span>
             <span class="sets-counter-target">/ ${ex.setsCount || 3}</span>
-            <button class="counter-btn" onclick="changeSets('${ex.id}', 1)">+</button>
+            <button class="counter-btn" onclick="changeSets('${ex.id}', 1, event)">+</button>
           </div>
         </div>
       </div>
@@ -3890,35 +3894,55 @@ function parseRest(r) {
 }
 
 
-function toggleDone(id, ev) {
-  ev.stopPropagation();
-  const was = !!state.done[id];
-  state.done[id] = !was;
-  if (state.done[id] && state.skipped[id]) {
+// Trouve la carte .exercise à mettre à jour. On préfère partir du clic réel (ev.target.closest)
+// plutôt que document.getElementById(id) seul : si jamais deux exercices finissent avec le même
+// id (bug historique déjà rencontré avec les packs), getElementById ne renvoie que le premier du
+// DOM et on met à jour/assombrit la mauvaise carte. Partir de l'élément réellement cliqué évite ça.
+function getExerciseEl(id, ev) {
+  const fromClick = ev && ev.target && ev.target.closest ? ev.target.closest('.exercise') : null;
+  return fromClick || document.getElementById(id);
+}
+
+// Marque un exercice fait/pas fait et met à jour tout ce qui en découle (état, DOM, séries,
+// séance en cours, récap). Partagé entre le clic direct sur "fini" et le passage automatique
+// à fait quand le compteur de séries atteint son objectif (voir changeSets).
+function markExerciseDone(id, done, ev) {
+  state.done[id] = done;
+  const el = getExerciseEl(id, ev);
+  if (done && state.skipped[id]) {
     delete state.skipped[id];
-    const el = document.getElementById(id);
     if (el) el.classList.remove('skipped');
   }
   const info = getExoById(id);
   const day = info ? info.day : null;
 
   // Register session start + last activity (sert à calculer une durée fiable même si l'appli est quittée)
-  if (state.done[id] && day) {
+  if (done && day) {
     if (!state.sessionStart[day]) {
       state.sessionStart[day] = Date.now();
     }
     state.lastActivity[day] = Date.now();
   }
+  // Cocher "fini" met directement le compteur de séries au total prévu.
+  if (done && info) {
+    state.setsDone[id] = info.exo.setsCount || 3;
+    const valueEl = document.getElementById(`sc-${id}`);
+    if (valueEl) valueEl.textContent = state.setsDone[id];
+  }
   saveState();
-  const el = document.getElementById(id);
-  el.classList.toggle('done', state.done[id]);
-  if (state.done[id]) vibrate(30);
+  if (el) el.classList.toggle('done', done);
+  if (done) vibrate(30);
   updateAllProgress();
 
   // Check if whole day is done -> show recap
-  if (day && state.done[id] && isDayComplete(day)) {
+  if (day && done && isDayComplete(day)) {
     setTimeout(() => showSessionRecap(day), 400);
   }
+}
+
+function toggleDone(id, ev) {
+  ev.stopPropagation();
+  markExerciseDone(id, !state.done[id], ev);
 }
 
 function isDayComplete(day) {
@@ -3941,7 +3965,7 @@ function togglePasser(id, ev) {
     if (state.done[id]) delete state.done[id];
   }
   saveState();
-  const el = document.getElementById(id);
+  const el = getExerciseEl(id, ev);
   if (el) {
     el.classList.toggle('skipped', !was);
     el.classList.toggle('done', !!state.done[id]);
