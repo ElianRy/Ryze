@@ -785,14 +785,16 @@ body[data-active-view="calendar"] #profileBar { display: none; }
 .info-card {
   background: linear-gradient(135deg, rgba(21, 16, 46, 0.98), rgba(15, 10, 36, 0.98));
   border: 1px solid rgba(124, 77, 255, 0.35);
-  padding: calc(12px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));
+  /* Pas de padding en haut, même raison que .editor-card/.picker-card : le header gère seul
+     sa marge de sécurité, pas de jeu marge-négative/padding fragile. */
+  padding: 0 20px calc(20px + env(safe-area-inset-bottom));
   max-width: 480px; width: 100%; height: 100vh; overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 60px -20px rgba(124, 77, 255, 0.4);
 }
 .info-card-header {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   position: sticky; top: 0; z-index: 5;
-  margin: calc(-12px - env(safe-area-inset-top)) -20px 14px; padding: calc(12px + env(safe-area-inset-top)) 20px 14px;
+  margin: 0 -20px 14px; padding: calc(12px + env(safe-area-inset-top)) 20px 14px;
   background: linear-gradient(135deg, rgba(21, 16, 46, 0.98), rgba(15, 10, 36, 0.98));
 }
 .info-card-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1px; text-transform: capitalize; background: linear-gradient(135deg, #a78bfa, #7c4dff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
@@ -830,14 +832,18 @@ body[data-active-view="calendar"] #profileBar { display: none; }
 .editor-card, .picker-card {
   background: linear-gradient(180deg, rgba(21, 16, 46, 0.99), rgba(15, 10, 36, 0.99));
   border: 1px solid rgba(124, 77, 255, 0.35);
-  padding: calc(12px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
+  /* Pas de padding en haut : le header (premier enfant) gère lui-même sa marge de sécurité,
+     donc pas besoin d'un jeu marge-négative/padding qui annule l'autre pour revenir à zéro
+     (fragile : le moindre écart d'arrondi entre les deux calc() laissait un fin espace visible
+     sur certains téléphones). Le fond du header touche ainsi le bord du conteneur à coup sûr. */
+  padding: 0 16px calc(18px + env(safe-area-inset-bottom));
   width: 100%; max-width: 480px; height: 100vh; overflow-y: auto;
   box-shadow: 0 -10px 60px rgba(0,0,0,0.7);
 }
 .editor-header {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   position: sticky; top: 0; z-index: 5;
-  margin: calc(-12px - env(safe-area-inset-top)) -16px 14px; padding: calc(12px + env(safe-area-inset-top)) 16px 14px;
+  margin: 0 -16px 14px; padding: calc(12px + env(safe-area-inset-top)) 16px 14px;
   background: linear-gradient(180deg, rgba(21, 16, 46, 0.99), rgba(15, 10, 36, 0.99));
 }
 .editor-day-name { flex: 1; background: var(--bg-4); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 10px 12px; font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 1px; }
@@ -1026,9 +1032,6 @@ body[data-active-view="calendar"] #profileBar { display: none; }
   padding: 20px;
 }
 .unlock-overlay.active { display: flex; animation: fadeIn 0.25s ease-out; }
-.unlock-flash { position: fixed; inset: 0; z-index: 3001; background: #fff; pointer-events: none; opacity: 0; }
-.unlock-flash.active { animation: unlockScreenFlash 0.45s ease-out; }
-@keyframes unlockScreenFlash { 0% { opacity: 0; } 12% { opacity: 0.85; } 100% { opacity: 0; } }
 @keyframes unlockCardShake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
 .unlock-card.shake { animation: unlockCardShake 0.5s ease-out 0.55s; }
 .unlock-card {
@@ -1420,8 +1423,6 @@ body { padding-bottom: 80px; }
     <button class="unlock-btn" onclick="closeUnlock()">CONTINUER</button>
   </div>
 </div>
-
-<div class="unlock-flash" id="unlockFlash"></div>
 
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-card">
@@ -5727,12 +5728,6 @@ function showNextUnlock() {
   if (card) {
     card.classList.remove('shake');
     if (isLevelUp) { void card.offsetWidth; card.classList.add('shake'); }
-  }
-  const flash = document.getElementById('unlockFlash');
-  if (isLevelUp && flash) {
-    flash.classList.remove('active');
-    void flash.offsetWidth;
-    flash.classList.add('active');
   }
   if (u.kind.includes('BADGE')) playBadgeSound();
   else playLevelUpSound();
