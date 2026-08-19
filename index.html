@@ -5991,7 +5991,10 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
-document.body.style.overscrollBehavior = 'contain';
+// (overscrollBehavior 'contain' sur body a été retiré : sur Samsung Internet, ce réglage
+// bloque complètement le scroll tactile de la page — seuls les éléments hors du flux normal
+// (header collant, barre du bas) restent réactifs. Le rebond au bord d'écran est un compromis
+// acceptable pour garder un scroll qui marche partout.)
 
 </script>
 </body>
