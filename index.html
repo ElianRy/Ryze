@@ -147,6 +147,12 @@ body {
 .toolbar-btn.reset { color: #ff7a7a; }
 .toolbar-btn.shuffle { color: var(--warmup); }
 .toolbar-btn.start { color: #4ade80; }
+@keyframes startFlash {
+  0% { transform: scale(1); box-shadow: none; }
+  40% { transform: scale(1.08); box-shadow: 0 0 18px 2px rgba(74, 222, 128, 0.6); }
+  100% { transform: scale(1); box-shadow: none; }
+}
+.start-flash { animation: startFlash 0.35s ease-out; }
 .toolbar-btn.end { color: #ff9090; }
 .toolbar-btn.edit { color: var(--warmup); }
 .toolbar-btn.summary { color: #5b8cff; }
@@ -882,12 +888,6 @@ body[data-active-view="calendar"] #profileBar { display: none; }
 .bm-row-fill { height: 100%; background: linear-gradient(90deg, var(--brand), #c4b5fd); border-radius: 4px; }
 .bm-row-pct { flex: 0 0 auto; width: 34px; text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); }
 .bm-advice { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--text-dim); line-height: 1.4; background: rgba(124, 77, 255, 0.08); border: 1px solid rgba(124, 77, 255, 0.2); border-radius: 10px; padding: 10px 12px; }
-.tips-wrap { display: flex; flex-direction: column; gap: 8px; }
-.tip-row { background: rgba(251, 191, 36, 0.06); border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 10px; padding: 10px 12px; }
-.tip-cat { font-family: 'Inter', sans-serif; font-size: 12.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-.tip-pct { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 400; color: var(--text-dim); }
-.tip-suggestion { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--text-dim); line-height: 1.4; }
-.tip-suggestion b { color: #fbbf24; }
 .bm-advice b { color: var(--text); }
 .editor-actions { display: flex; flex-direction: column; gap: 8px; }
 .editor-btn { padding: 12px; border-radius: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; border: 1px solid var(--border); }
@@ -2775,57 +2775,15 @@ function closeMusclePopup(ev) {
 // Conseils d'équilibrage : regarde le programme entier (pas juste le jour affiché) pour repérer
 // les 2 catégories musculaires les moins travaillées, et suggère des exercices de la bibliothèque
 // (pas déjà dans le programme) qui les ciblent le plus.
-function buildFocusTipsHtml() {
-  const exercises = allProgramExercises();
-  const scores = computeMuscleScores(exercises);
-  const catScores = {};
-  Object.entries(MAJOR_MUSCLE_CATEGORIES).forEach(([cat, keys]) => {
-    catScores[cat] = keys.reduce((s, k) => s + (scores[k] || 0), 0);
-  });
-  const catTotal = Object.values(catScores).reduce((a, b) => a + b, 0);
-  if (catTotal === 0) return '';
-  const usedIcons = new Set(exercises.map(ex => ex.icon));
-  const sorted = Object.keys(MAJOR_MUSCLE_CATEGORIES)
-    .map(cat => [cat, catScores[cat] || 0])
-    .sort((a, b) => a[1] - b[1]);
-  const weakest = sorted.slice(0, 2);
-  const rows = weakest.map(([cat, score]) => {
-    const pct = Math.round((score / catTotal) * 100);
-    const keys = MAJOR_MUSCLE_CATEGORIES[cat];
-    const candidates = EXERCISE_LIBRARY
-      .filter(ex => !usedIcons.has(ex.icon))
-      .map(ex => {
-        const map = EXERCISE_MUSCLE_MAP[ex.icon];
-        if (!map) return null;
-        let w = 0;
-        keys.forEach(k => { if (map[k] && map[k] > w) w = map[k]; });
-        return w > 0 ? { ex, w } : null;
-      })
-      .filter(Boolean)
-      .sort((a, b) => b.w - a.w)
-      .slice(0, 2);
-    const suggestion = candidates.length > 0
-      ? candidates.map(c => `<b>${c.ex.name}</b>`).join(' ou ')
-      : null;
-    return `
-      <div class="tip-row">
-        <div class="tip-cat">🎯 ${cat} <span class="tip-pct">${pct}% du volume total</span></div>
-        <div class="tip-suggestion">${suggestion ? `Essaie d'ajouter : ${suggestion}` : "Déjà bien couvert avec tes exercices actuels."}</div>
-      </div>`;
-  }).join('');
-  return `<div class="stats-section-title" style="margin-top:18px;">Pour mieux équilibrer ton programme</div><div class="tips-wrap">${rows}</div>`;
-}
-
-// Popup "Résumé" d'une séance : muscles ciblés CE jour-là (carte + légende propre au jour),
-// plus des conseils calculés sur l'ensemble du programme.
+// Popup "Résumé" d'une séance : muscles ciblés CE jour-là (carte + légende propre au jour).
 function showSessionSummary(day) {
   const d = WORKOUT[day];
   const exercises = [];
   d.sections.forEach(sec => sec.exercises.forEach(ex => exercises.push(ex)));
   const containerId = `summaryBodyMap-${day}`;
   const body = `
+    <div class="info-section-title">Ce que tu vas travailler aujourd'hui</div>
     <div class="body-map-wrap active" id="${containerId}"></div>
-    ${buildFocusTipsHtml()}
   `;
   openInfo(`${d.name} — Résumé`, body);
   updateBodyMap(containerId, exercises);
@@ -3298,7 +3256,7 @@ function renderDays() {
     const sessionToolbar = document.createElement('div');
     sessionToolbar.className = 'day-toolbar';
     sessionToolbar.innerHTML = `
-      <button class="toolbar-btn start" onclick="startSession(${d})">▶ Début séance</button>
+      <button class="toolbar-btn start" onclick="startSession(this, ${d})">▶ Début séance</button>
       <button class="toolbar-btn end" onclick="endSession(${d})">⏹ Fin séance</button>
       <button class="toolbar-btn edit" onclick="openDayEditor(${d})">✏️ Modifier</button>
       <button class="toolbar-btn summary" onclick="showSessionSummary(${d})">📋 Résumé</button>
@@ -4022,14 +3980,17 @@ function updateComment(id, val) {
   updateComment._t = setTimeout(saveState, 300);
 }
 
-function startSession(d) {
+function startSession(btn, d) {
   if (state.sessionStart[d]) { showToast('Séance déjà en cours'); vibrate(15); return; }
+  // Petit flash sur le bouton avant que la pop-up "ce que tu vas travailler" s'ouvre,
+  // pour confirmer visuellement que le clic a bien été pris en compte.
+  if (btn) { btn.classList.remove('start-flash'); void btn.offsetWidth; btn.classList.add('start-flash'); }
   state.sessionStart[d] = Date.now();
   state.lastActivity[d] = Date.now();
   saveState();
   showToast(`Séance ${WORKOUT[d].name} démarrée 💪`);
   vibrate(20);
-  showSessionSummary(d);
+  setTimeout(() => showSessionSummary(d), 220);
 }
 
 function endSession(d) {
