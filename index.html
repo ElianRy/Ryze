@@ -850,7 +850,9 @@ body[data-active-view="calendar"] #profileBar { display: none; }
 .intensity-legend.small { max-width: 200px; margin-top: -8px; gap: 10px; }
 .intensity-legend-swatch { display: flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-dim); letter-spacing: 0.3px; text-transform: uppercase; }
 .intensity-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
-.bm-part { stroke: rgba(255, 255, 255, 0.08); stroke-width: 0.15; transition: fill 0.4s ease; }
+.bm-part { stroke: rgba(255, 255, 255, 0.08); stroke-width: 0.15; transition: fill 0.4s ease, opacity 0.15s ease; }
+.bm-clickable { cursor: pointer; }
+.bm-clickable:active { opacity: 0.65; }
 .bm-legend { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
 .bm-row { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 3px 4px; border-radius: 6px; transition: background 0.15s; }
 .bm-row:active { background: rgba(124, 77, 255, 0.15); }
@@ -2593,14 +2595,30 @@ function muscleScoresToIdColors(scores) {
   return idColor;
 }
 
-function renderBodyMapSVG(scores, small) {
+// Reverse lookup : id de tracé anatomique individuel (BODY_MUSCLE_PATHS) -> catégorie majeure
+// (MAJOR_MUSCLE_CATEGORIES) — permet de rendre chaque zone du dessin cliquable directement.
+const PATH_ID_TO_CATEGORY = {};
+BODY_MUSCLE_PATHS.forEach(m => {
+  const groupEntry = Object.entries(MUSCLE_GROUP_IDS).find(([, ids]) => ids.includes(m.id));
+  if (!groupEntry) return;
+  const catEntry = Object.entries(MAJOR_MUSCLE_CATEGORIES).find(([, keys]) => keys.includes(groupEntry[0]));
+  if (catEntry) PATH_ID_TO_CATEGORY[m.id] = catEntry[0];
+});
+
+// containerId (optionnel) : si fourni, chaque zone anatomique devient cliquable et ouvre la
+// même fiche "quels exercices travaillent ce muscle" que les lignes de la légende en dessous.
+function renderBodyMapSVG(scores, small, containerId) {
   const idColor = muscleScoresToIdColors(scores);
   const baseColor = '#372a5e'; // corps "au repos" (zones non mappées : tête, mains, pieds, articulations...)
   // Contour sombre sur chaque zone : sans lui, les régions au même niveau d'intensité (ou
   // sombres) fusionnent en une tache illisible sur le fond violet foncé de la carte.
   const paths = BODY_MUSCLE_PATHS.map(m => {
     const fill = idColor[m.id] || baseColor;
-    return `<path class="bm-part" d="${m.d}" fill="${fill}" stroke="rgba(8, 5, 20, 0.6)" stroke-width="0.35"></path>`;
+    const cat = PATH_ID_TO_CATEGORY[m.id];
+    const clickable = cat && containerId;
+    const cls = clickable ? ' bm-part bm-clickable' : ' bm-part';
+    const onclick = clickable ? ` onclick="showMuscleCategoryExercises('${cat}', '${containerId}')"` : '';
+    return `<path class="${cls}" d="${m.d}" fill="${fill}" stroke="rgba(8, 5, 20, 0.6)" stroke-width="0.35"${onclick}></path>`;
   }).join('');
   // Le tracé remplit tout le viewBox d'origine (0 0 74 93) sans la moindre marge : la tête touche
   // littéralement le bord haut, donc le premier conteneur venu (header collant, coin arrondi...)
@@ -2652,7 +2670,7 @@ function updateBodyMap(containerId, exercises) {
   if (!el) return;
   BODY_MAP_EXERCISES[containerId] = exercises;
   const scores = computeMuscleScores(exercises);
-  el.innerHTML = renderBodyMapSVG(scores) + renderMuscleLegend(scores, containerId);
+  el.innerHTML = renderBodyMapSVG(scores, false, containerId) + renderMuscleLegend(scores, containerId);
 }
 
 function showMuscleCategoryExercises(catName, containerId) {
@@ -3491,9 +3509,13 @@ function openExerciseInfo(exId) {
   const ex = info ? info.exo : null;
   if (!ex) return;
   const t = EXERCISE_TIPS[ex.icon];
+  const libItem = getLibraryItem(ex.icon);
+  const descHtml = libItem && libItem.desc
+    ? `<div class="info-section-title">Comment faire</div><p class="info-muscles">${libItem.desc}</p>`
+    : '';
   const imgHtml = IMAGES[ex.icon] ? `<img class="info-exo-img" src="${IMAGES[ex.icon]}" alt="${ex.name}">` : '';
   if (!t) {
-    openInfo(ex.name, imgHtml + '<div class="info-empty">Pas encore de conseils pour cet exercice</div>');
+    openInfo(ex.name, imgHtml + descHtml + '<div class="info-empty">Pas encore de conseils pour cet exercice</div>');
     return;
   }
   const tipsHtml = t.tips.map(x => `<li>${x}</li>`).join('');
@@ -3503,6 +3525,7 @@ function openExerciseInfo(exId) {
     : '';
   const body = `
     ${imgHtml}
+    ${descHtml}
     <div class="info-section-title">Muscles ciblés</div>
     <p class="info-muscles">${t.muscles}</p>
     ${bodyMapHtml}
@@ -4885,8 +4908,9 @@ function openDayDetail(dateKey) {
   // Carte musculaire combinée de tout ce qui a été réellement fait ce jour-là
   const allExercises = sessions.flatMap(h => h.exercises || []);
   const hasExerciseDetail = allExercises.length > 0;
+  if (hasExerciseDetail) BODY_MAP_EXERCISES['calendarDayDetail'] = allExercises;
   const bodyMapHtml = hasExerciseDetail
-    ? renderBodyMapSVG(computeMuscleScores(allExercises), true)
+    ? renderBodyMapSVG(computeMuscleScores(allExercises), true, 'calendarDayDetail')
     : '';
   const noDetailHint = !hasExerciseDetail
     ? '<div class="info-empty">Détail des exercices non disponible pour cette séance (enregistrée avant la mise à jour)</div>'
